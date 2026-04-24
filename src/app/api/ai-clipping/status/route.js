@@ -11,17 +11,17 @@ export async function POST(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { requestId, metadata } = await req.json();
+    const body = await req.json();
+    const { requestId } = body;
 
     if (!requestId) {
       return NextResponse.json({ error: "Request ID is required" }, { status: 400 });
     }
 
-    const result = await AIService.checkStatus(requestId, session.user.id, metadata);
-
+    const result = await AIService.checkStatus(requestId);
     return NextResponse.json(result);
   } catch (error) {
-    console.error("[AI_HEADSHOT_STATUS]", error);
-    return NextResponse.json({ error: error.message || "Internal Error" }, { status: 500 });
+    console.error("[AICLIP_STATUS]", error);
+    return new NextResponse(error.message || "Internal Error", { status: 500 });
   }
 }

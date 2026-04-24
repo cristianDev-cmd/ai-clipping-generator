@@ -6,8 +6,8 @@ import { Navbar } from "@/components/saas/Navbar";
 const font = Outfit({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "AI Headshot Generator - Premium Portraits",
-  description: "Professional AI headshots for LinkedIn, teams, and creators.",
+  title: "AICLIP Studio - AI YouTube Downloader & Highlight Clipper",
+  description: "Download YouTube videos and extract viral AI highlights instantly.",
 };
 
 export default function RootLayout({ children }) {

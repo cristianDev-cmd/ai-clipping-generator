@@ -1,38 +1,37 @@
-# 🚀 AI Headshot Generator — Professional Portrait Studio
+# 🚀 AICLIPS Studio — Viral Content Extraction Engine
 
-> **A beautifully designed, fully-integrated AI headshot studio.** Built with Next.js, this open-source template serves as a complete, self-contained SaaS boilerplate for generating high-quality professional portraits and business headshots for LinkedIn, teams, and personal branding.
+> **A beautifully designed, fully-integrated AI clipping studio.** Built with Next.js, this platform serves as a complete SaaS boilerplate for downloading YouTube videos and automatically extracting viral highlights for TikTok, Reels, and Shorts.
 
 ## 🌐 Live Manifestation
 
-**[Experience the full glassmorphic, responsive interface here](https://ai-headshot-generator-xi.vercel.app/)**. Sign in with Google to explore the Portrait Studio, My Headshots archive, and Booking Tiers directly from your browser.
+**[Experience the full glassmorphic, responsive interface here](https://aiclips-generator.vercel.app/)**. Sign in with Google to explore the Video Studio, My Clips archive, and Credits dashboard directly from your browser.
 
 ---
 
-**AI Headshot Generator** is not just another wrapper — it's a production-ready, highly-optimized AI web application. Out of the box, it seamlessly manages User Authentication, Credits & Billing, Image Persistence, and asynchronous AI generation polling using a sleek Next.js (App Router) architecture. It empowers you to build professional-grade AI portrait workflows with built-in mobile optimization, making it the perfect starting point for your next AI SaaS.
+**AICLIPS Studio** is a production-ready, highly-optimized AI web application. Out of the box, it seamlessly manages YouTube video extraction, asynchronous AI highlight detection, User Authentication, Credits & Billing, and Media Persistence using a sleek Next.js (App Router) architecture.
 
-**Why use AI Headshot Generator?**
+**Why use AICLIPS Studio?**
 
 - **Production-Ready SaaS** — Complete with Google OAuth and Stripe Checkout workflows built-in.
-- **Dedicated Portrait Studio** — Specifically tailored UI for multi-image reference generation and professional style selection.
+- **Viral Clipping Studio** — Tailored UI for extracting viral highlights with custom Aspect Ratio tuning (9:16, 1:1, etc.).
+- **Smart Duration Detection** — Client-side video probing for precise credit charging based on actual video length.
 - **Historical Archive** — All creations are securely persisted to a PostgreSQL database for a customized user gallery.
 - **Premium Glassmorphic UX** — Dynamic multi-theme support (Indigo, Emerald, Rose, Amber) with high-fidelity micro-animations.
-- **Extensible Architecture** — Easily swap out the underlying AI model while maintaining the premium application UI.
-
-![AI Headshot Generator](https://cdn.muapi.ai/outputs/d9c39378f60e48098f6b6ce657dc18b5.png)
+- **Event-Driven Architecture** — Robust webhook-based status updates for reliable long-running AI tasks.
 
 ## ✨ Core Features
 
-- **Kinetic Portrait Studio** — Generate stunning professional headshots with text prompts. Includes options for advanced `Aspect Ratio` tuning and tiered Resolutions (1K, 2K, 4K) tied directly to a flexible credit cost system.
-- **Multi-Image Reference Mode** — Transition smoothly to professional editing. Upload local images or add external URLs to use as visual nodes for complex portrait configurations.
-- **Secure My Headshots Archive** — A dedicated history vault for logged-in users. Displays past portrait sessions securely fetched from the database, viewable in a detailed inspector modal with 1-click downloads.
-- **Booking Tiers & Billing** — Complete Stripe integration. Start users off with a balance, map generations to credit deductions, and seamlessly route them to an interactive pricing page to book sessions (Starter, Professional, Executive).
-- **Beautiful & Dynamic UI** — Built on Tailwind CSS and Framer Motion, ensuring every state transition, loading spinner, and dropdown elegantly guides the user.
+- **YouTube Source Extraction** — Seamlessly download source videos from YouTube by just pasting a link. Handles quality selection (720p, 1080p, etc.) and automatic link passing to the clipping tool.
+- **AI Highlight Engine** — Automatically detect the most engaging moments in any video. Adjust the number of highlights (1 to 60) and aspect ratio to fit your social media platform.
+- **Dynamic Credit System** — Fair pricing logic: 10 credits per minute of video + 10 credits per highlight. Real-time cost calculation on the generate button using built-in video probing.
+- **Secure My Clips Archive** — A dedicated history vault for logged-in users. Track the status of your processing clips and view finished results in a detailed inspector modal.
+- **Asynchronous Webhook Sync** — Built-in MuAPI webhook handler that updates your database automatically when generation is complete, ensuring your UI is always in sync.
 
 ---
 
 ## ⚡ Deployment: Vercel & Production
 
-Deploying an instance of AI Headshot Generator to the web requires minimal configuration. The architecture is engineered explicitly for **Vercel** serverless environments.
+Deploying an instance of AICLIPS Studio requires minimal configuration. The architecture is engineered explicitly for **Vercel** serverless environments.
 
 ### 🔑 Required Environment Variables
 
@@ -49,13 +48,12 @@ To successfully deploy and run, you must populate the following environment vari
 | **Stripe Billing**    | `STRIPE_SECRET_KEY`                  | Get from [Stripe Dashboard](https://dashboard.stripe.com/apikeys)                            |
 |                       | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Get from [Stripe Dashboard](https://dashboard.stripe.com/apikeys)                            |
 |                       | `STRIPE_WEBHOOK_SECRET`              | Webhook secret for resolving credit purchases                                                |
-| **AI Generator**      | `HEADSHOT_API_KEY`                   | Create an account and get your API key for your targeted headshot model.                     |
+| **AI Generator**      | `AICLIPS_API_KEY`                    | Your MuAPI Key for YouTube downloads and AI clipping services.                                |
+|                       | `WEBHOOK_URL`                        | The endpoint where MuAPI will send status updates (e.g., `https://your-app.com/api/webhook/muapi`) |
 
 ---
 
 ## 🛠️ Local Development
-
-Ready to iterate locally? Setup is straightforward.
 
 ### Prerequisites
 
@@ -66,8 +64,8 @@ Ready to iterate locally? Setup is straightforward.
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/SamurAIGPT/ai-headshot-generator
-cd ai-headshot-generator
+git clone https://github.com/SamurAIGPT/aiclips-generator
+cd aiclips-generator
 
 # 2. Install dependencies
 npm install
@@ -88,4 +86,4 @@ The graphical console should now be heavily responsive on `http://localhost:3000
 
 ---
 
-_AI Headshot Generator: A modular, mobile-ready, production-grade AI portrait workspace built for creators and builders._
+_AICLIPS Studio: A modular, mobile-ready, production-grade AI clipping workspace built for content creators._

@@ -9,7 +9,7 @@ import {
   FaExpandAlt,
 } from "react-icons/fa";
 import { useRouter } from "next/navigation";
-import { downloadImage } from "@/lib/utils";
+import { downloadMedia } from "@/lib/utils";
 import { FiDownload } from "react-icons/fi";
 
 export default function CreationsPage() {
@@ -18,7 +18,7 @@ export default function CreationsPage() {
   const [creations, setCreations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedClip, setSelectedClip] = useState(null);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -42,7 +42,7 @@ export default function CreationsPage() {
     }
   };
 
-  const parseImageUrl = (url) => {
+  const parseResultUrl = (url) => {
     try {
       const parsed = JSON.parse(url);
       return Array.isArray(parsed) ? parsed : [url];
@@ -73,10 +73,10 @@ export default function CreationsPage() {
           </span>
         </div>
         <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-foreground">
-          MY HEADSHOTS
+          MY CREATIONS
         </h1>
         <p className="text-muted font-medium text-xs uppercase tracking-widest leading-loose max-w-xl">
-          Your generative legacy, manifested and stored.{" "}
+          Your downloaded videos and AI generated highlights, manifested and stored.{" "}
           <br className="hidden md:block" />
           Quick access to your visual nodes.
         </p>
@@ -102,7 +102,7 @@ export default function CreationsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <AnimatePresence>
               {creations.map((item, index) => {
-                const urls = parseImageUrl(item.imageUrl);
+                const urls = parseResultUrl(item.resultUrl);
                 const thumbnail = urls[0];
                 const isPack = urls.length > 1;
 
@@ -113,20 +113,27 @@ export default function CreationsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     className="group relative rounded-xl bg-glass-bg backdrop-blur-3xl border border-glass-border aspect-square cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow transition-all"
-                    onClick={() => setSelectedImage({ ...item, urls })}
+                    onClick={() => setSelectedClip({ ...item, urls })}
                   >
                     {item.status === "completed" ? (
                       <div className="w-full h-full relative">
-                        <img
+                        <video
                           src={thumbnail}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          alt={item.category}
+                          muted
+                          loop
+                          playsInline
+                          onMouseEnter={(e) => e.target.play()}
+                          onMouseLeave={(e) => e.target.pause()}
                         />
                         {isPack && (
                           <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 rounded-md text-[8px] font-black text-white uppercase tracking-widest backdrop-blur-md">
                             Pack of {urls.length}
                           </div>
                         )}
+                        <div className="absolute top-2 left-2 px-2 py-1 bg-primary-500/80 rounded-md text-[7px] font-black text-white uppercase tracking-widest backdrop-blur-md">
+                          {item.type === "youtube_download" ? "YT Download" : "AI Highlight"}
+                        </div>
                       </div>
                     ) : item.status === "failed" ? (
                       <div className="w-full h-full flex flex-col items-center justify-center bg-red-500/10 gap-3">
@@ -142,12 +149,12 @@ export default function CreationsPage() {
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 p-4 flex flex-col justify-end">
-                      <p className="text-white text-xs font-semibold tracking-tight truncate mb-1 uppercase">
-                        {item.category}
+                      <p className="text-white text-[10px] font-semibold tracking-tight truncate mb-1 uppercase">
+                        {item.type === "youtube_download" ? "Source Video" : "AI Highlight"}
                       </p>
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] font-semibold text-primary-400 uppercase tracking-widest">
-                          {item.aspectRatio}
+                          {item.aspectRatio || item.resolution}
                         </span>
                         <div className="w-8 h-8 rounded-lg bg-glass-bg backdrop-blur-3xl/10 backdrop-blur-md flex items-center justify-center text-white">
                           <FaExpandAlt className="text-[10px]" />
@@ -162,15 +169,15 @@ export default function CreationsPage() {
         )}
       </div>
 
-      {/* Image Detail Modal */}
+      {/* Clip Detail Modal */}
       <AnimatePresence>
-        {selectedImage && (
+        {selectedClip && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[1000] bg-slate-950/50 backdrop-blur-sm p-4 md:p-12 flex flex-col items-center justify-center"
-            onClick={() => setSelectedImage(null)}
+            onClick={() => setSelectedClip(null)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.98, y: 10 }}
@@ -178,18 +185,18 @@ export default function CreationsPage() {
               className="relative max-w-6xl w-full h-full bg-glass-bg backdrop-blur-3xl border border-glass-border rounded-xl overflow-hidden flex flex-col md:flex-row shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Image Side */}
+              {/* Video Side */}
               <div className="flex w-full md:w-[50%] h-[50%] md:h-full p-2 bg-glass-bg backdrop-blur-3xl flex border-b md:border-b-0 md:border-r border-glass-border overflow-y-auto custom-scrollbar">
-                {selectedImage.status === "completed" ? (
+                {selectedClip.status === "completed" ? (
                   <div className="w-full flex flex-col gap-6">
-                    {selectedImage.urls.length > 1 ? (
+                    {selectedClip.urls.length > 1 ? (
                       <div className="grid grid-cols-2 gap-2">
-                        {selectedImage.urls.map((url, idx) => (
+                        {selectedClip.urls.map((url, idx) => (
                           <div key={idx} className="relative group rounded-lg overflow-hidden border border-glass-border aspect-[3/4]">
-                            <img src={url} className="w-full h-full object-cover" alt={`Result ${idx + 1}`} />
+                            <video src={url} className="w-full h-full object-cover" muted loop autoPlay playsInline />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                               <button
-                                onClick={() => downloadImage(url, `creation-${selectedImage.category}-${idx + 1}.jpg`)}
+                                onClick={() => downloadMedia(url, `clip-${selectedClip.type}-${idx + 1}.mp4`)}
                                 className="p-2 bg-white text-black rounded-lg transform scale-90 group-hover:scale-100 transition-transform shadow-xl"
                               >
                                 <FiDownload size={14} />
@@ -199,21 +206,22 @@ export default function CreationsPage() {
                         ))}
                       </div>
                     ) : (
-                      <img
-                        src={selectedImage.urls[0]}
+                      <video
+                        src={selectedClip.urls[0]}
                         className="h-full w-full object-contain"
-                        alt="Creation"
+                        controls
+                        autoPlay
                       />
                     )}
                   </div>
-                ) : selectedImage.status === "failed" ? (
+                ) : selectedClip.status === "failed" ? (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-red-500/5 gap-4">
                     <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 text-2xl">
                       ✕
                     </div>
                     <div className="text-center space-y-2">
                       <h3 className="text-sm font-bold text-red-500 uppercase tracking-widest">Generation Failed</h3>
-                      <p className="text-xs text-muted max-w-xs">{selectedImage.error || "An unknown error occurred."}</p>
+                      <p className="text-xs text-muted max-w-xs">{selectedClip.error || "An unknown error occurred."}</p>
                     </div>
                   </div>
                 ) : (
@@ -228,29 +236,29 @@ export default function CreationsPage() {
                 <div className="flex flex-col justify-center space-y-4">
                   <div className="space-y-2">
                     <div className="text-[9px] font-semibold text-muted uppercase tracking-widest flex items-center gap-2">
-                      {selectedImage.urls.length > 1 ? "Headshot Pack" : "Single Portrait"}
+                      {selectedClip.urls.length > 1 ? "Video Pack" : "Single Piece"}
                     </div>
                     <p className="text-sm font-medium text-foreground">
-                      {selectedImage.category}
+                      {selectedClip.type === "youtube_download" ? "Source Video (YouTube)" : "AI Clipping Highlights"}
                     </p>
                   </div>
 
                   <div className="space-y-6 border-t border-white/5 pt-10">
                     <div className="grid grid-cols-2 gap-8">
                       <div className="space-y-1.5">
-                        <div className="text-[9px] font-semibold text-muted uppercase tracking-widest">Ratio</div>
-                        <div className="text-xs text-foreground font-medium">{selectedImage.aspectRatio}</div>
+                        <div className="text-[9px] font-semibold text-muted uppercase tracking-widest">Ratio / Res</div>
+                        <div className="text-xs text-foreground font-medium">{selectedClip.aspectRatio || selectedClip.resolution || "Original"}</div>
                       </div>
                       <div className="space-y-1.5">
-                        <div className="text-[9px] font-semibold text-muted uppercase tracking-widest">Resolution</div>
-                        <div className="text-xs text-foreground font-medium">Professional HD</div>
+                        <div className="text-[9px] font-semibold text-muted uppercase tracking-widest">Clips</div>
+                        <div className="text-xs text-foreground font-medium">{selectedClip.numClips || 1} Highlights</div>
                       </div>
                     </div>
                     
                     <div className="space-y-1.5">
                       <div className="text-[9px] font-semibold text-muted uppercase tracking-widest">Timestamp</div>
                       <div className="text-[11px] text-muted">
-                        {new Date(selectedImage.createdAt).toLocaleString('en-US', { 
+                        {new Date(selectedClip.createdAt).toLocaleString('en-US', { 
                           month: 'long', 
                           day: 'numeric',
                           year: 'numeric',
@@ -265,14 +273,14 @@ export default function CreationsPage() {
                 <div className="pt-12">
                   <button
                     onClick={async () => {
-                      if (selectedImage.status !== "completed") return;
+                      if (selectedClip.status !== "completed") return;
                       setDownloading(true);
-                      for (let i = 0; i < selectedImage.urls.length; i++) {
-                        await downloadImage(selectedImage.urls[i], `headshot-${selectedImage.category}-${i + 1}.jpg`);
+                      for (let i = 0; i < selectedClip.urls.length; i++) {
+                        await downloadMedia(selectedClip.urls[i], `clip-${selectedClip.type}-${i + 1}.mp4`);
                       }
                       setDownloading(false);
                     }}
-                    disabled={downloading || selectedImage.status !== "completed"}
+                    disabled={downloading || selectedClip.status !== "completed"}
                     className="w-full py-3 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-lg font-bold tracking-wider uppercase text-[10px] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 shadow-xl shadow-primary-500/20 border border-primary-400/50"
                   >
                     {downloading ? (
@@ -280,8 +288,8 @@ export default function CreationsPage() {
                     ) : (
                       <FiDownload size={14} />
                     )}
-                    {selectedImage.status === "completed" 
-                      ? (downloading ? "Extracting..." : (selectedImage.urls.length > 1 ? "Download All" : "Download Piece"))
+                    {selectedClip.status === "completed" 
+                      ? (downloading ? "Extracting..." : (selectedClip.urls.length > 1 ? "Download All" : "Download Piece"))
                       : "Generating..."}
                   </button>
                 </div>
@@ -289,7 +297,7 @@ export default function CreationsPage() {
 
               {/* Close Button */}
               <button
-                onClick={() => setSelectedImage(null)}
+                onClick={() => setSelectedClip(null)}
                 className="absolute top-6 right-6 w-8 h-8 flex items-center justify-center text-muted hover:text-white transition-colors"
               >
                 <span className="text-xl">✕</span>

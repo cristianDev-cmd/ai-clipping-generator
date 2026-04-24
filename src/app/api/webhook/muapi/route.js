@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req) {
   try {
     const data = await req.json();
-    const requestId = data.id;
+    const requestId = data.id || data.request_id;
 
     if (!requestId) {
       console.error("[MUAPI_WEBHOOK_ERROR] Missing request id in payload", data);
@@ -28,17 +28,25 @@ export async function POST(req) {
           error: data.error
         }
       });
-      // Credits refund logic could go here if implemented
     } else {
-      const outputs = data.outputs || [];
-      const imageUrl = JSON.stringify(outputs);
+      let mediaUrls = [];
+      
+      // MuAPI might return url, video_url or an outputs array depending on the endpoint
+      if (data.outputs && Array.isArray(data.outputs)) {
+        mediaUrls = data.outputs;
+      } else if (data.url) {
+        mediaUrls = [data.url];
+      } else if (data.video_url) {
+        mediaUrls = [data.video_url];
+      } else if (data.download_url) {
+        mediaUrls = [data.download_url];
+      }
 
       await prisma.creation.update({
         where: { id: creation.id },
         data: {
           status: "completed",
-          imageUrl: imageUrl,
-          isPack: true,
+          resultUrl: JSON.stringify(mediaUrls),
         }
       });
     }

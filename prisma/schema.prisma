@@ -48,10 +48,11 @@ model User {
 
 model Creation {
   id           String   @id @default(cuid())
-  category     String?
-  imageUrl     String?  @db.Text
-  isPack       Boolean  @default(false)
+  type         String   @default("ai_clipping")
+  resultUrl    String?  @db.Text
   aspectRatio  String?
+  resolution   String?
+  numClips     Int?
   createdAt    DateTime @default(now())
   userId       String
   

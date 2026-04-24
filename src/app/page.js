@@ -1,249 +1,156 @@
 "use client";
 
 import { useSession, signIn } from "next-auth/react";
+import { downloadMedia } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import {
-  FaBolt,
-  FaMagic,
+  FaYoutube,
+  FaCut,
   FaChevronDown,
   FaExpand,
-  FaPlus,
-  FaTrash,
-  FaImages,
+  FaFilm,
+  FaBolt,
+  FaCheckCircle,
 } from "react-icons/fa";
 import { FiDownload } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { downloadImage, headshotsExamples } from "@/lib/utils";
 
-const ASPECT_RATIOS = [
-  { label: "1:1 Square", value: "1:1" },
-  { label: "4:3 Classic", value: "4:3" },
-  { label: "3:4 Portrait", value: "3:4" },
-  { label: "16:9 Landscape", value: "16:9" },
-  { label: "9:16 Portrait", value: "9:16" },
+const YT_FORMATS = [
+  { label: "1080p (FHD)", value: "1080" },
+  { label: "720p (HD)", value: "720" },
+  { label: "480p", value: "480" },
+  { label: "360p", value: "360" },
+  { label: "4K (UHD)", value: "4k" },
+  { label: "MP3 Audio", value: "mp3" },
 ];
 
-const PHOTO_CATEGORIES = [
-  "LinkedIn",
-  "Tinder",
-  "Bumble",
-  "OldMoney",
-  "Cyberpunk",
-  "CEO",
-  "CleanGirl",
-  "DarkAcademia",
-  "Anime",
-  "Doctor",
-  "Lawyer",
-  "MobWife",
-  "Bali",
-  "90s",
-  "Fitness",
-  "Christmas",
-  "Halloween",
-  "EuropeanElegance",
-  "ChampionSportsMoment",
-  "JobSwapDaydream",
-  "TravelTheWorld",
-  "DatingPack",
-  "FlashPosePerfection",
-  "CapAndGown",
-  "CorporateBoss",
-  "RocknRollLuxury",
-  "TheBigWeddingDay",
-  "RusticCharm",
-  "DressedToImpress",
-  "IdentificationPhoto",
-  "DontMissYourProm",
-  "GoddessOfNature",
-  "BlackAndWhiteMagic",
-  "HomelyComforts",
-  "BalloonsBalloonsBalloons",
-  "BeautyBlooms",
-  "SuperheroAdventure",
-  "BoldFashionStatements",
-  "FantasyOutfits",
-  "OnTheCatwalk",
-  "HalloweenHorror",
-  "CosplayGalore",
-  "Ghibli",
-  "Pixar",
-  "SpiderVerse",
-].sort();
-
-const HeadshotCarousel = () => {
-  return (
-    <div className="w-full overflow-hidden relative py-6">
-      <div className="absolute inset-y-0 left-0 w-24 z-10" />
-      <div className="absolute inset-y-0 right-0 w-24 z-10" />
-      
-      <motion.div
-        animate={{ x: ["0%", "-50%"] }}
-        transition={{
-          duration: 100,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-        className="flex gap-4 w-max px-4"
-      >
-        {[...headshotsExamples, ...headshotsExamples].map((example, idx) => (
-          <div
-            key={idx}
-            className="w-40 md:w-52 aspect-[3/4] rounded-2xl overflow-hidden relative group border border-glass-border bg-glass-bg shrink-0"
-          >
-            <img
-              src={example.url}
-              alt={example.name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-            <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-md rounded-md border border-white/10 flex items-center gap-1.5 shadow-xl">
-              <div className="w-1 h-1 bg-primary-500 rounded-full animate-pulse" />
-              <span className="text-[8px] font-black text-white uppercase tracking-widest leading-none">
-                AI Generated
-              </span>
-            </div>
-          </div>
-        ))}
-      </motion.div>
-    </div>
-  );
-};
+const ASPECT_RATIOS = [
+  { label: "9:16 (TikTok, Reels, Shorts)", value: "9:16" },
+  { label: "16:9 (YouTube, TV)", value: "16:9" },
+  { label: "1:1 (Instagram Square)", value: "1:1" },
+  { label: "4:5 (Instagram Portrait)", value: "4:5" },
+  { label: "4:3 (Classic Video)", value: "4:3" },
+  { label: "3:4 (Portrait)", value: "3:4" },
+];
 
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // UI State
-  const [isRatioOpen, setIsRatioOpen] = useState(false);
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const ratioRef = useRef(null);
-  const categoryRef = useRef(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef(null);
+  // Tab State: "download" | "clip"
+  const [activeTab, setActiveTab] = useState("download");
 
-  // Form State
-  const [category, setCategory] = useState(PHOTO_CATEGORIES[0]);
-  const [aspectRatio, setAspectRatio] = useState(ASPECT_RATIOS[0]);
-  const [referenceImage, setReferenceImage] = useState(null); // Single URL string
-  const [newImageUrl, setNewImageUrl] = useState("");
+  // YouTube Download State
+  const [ytUrl, setYtUrl] = useState("");
+  const [ytFormat, setYtFormat] = useState(YT_FORMATS[1]);
+  const [isYtFormatOpen, setIsYtFormatOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [ytResult, setYtResult] = useState(null); // stores the resulting video URL
 
-  // Generation State
-  const [loading, setLoading] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
-  const [resultUrl, setResultUrl] = useState(null);
+  // AI Clipping State
+  const [clipUrl, setClipUrl] = useState("");
+  const [numHighlights, setNumHighlights] = useState(3);
+  const [clipAspectRatio, setClipAspectRatio] = useState(ASPECT_RATIOS[0]);
+  const [isClipRatioOpen, setIsClipRatioOpen] = useState(false);
+  const [isClipping, setIsClipping] = useState(false);
+  const [clipResult, setClipResult] = useState(null);
+  const [clippingCost, setClippingCost] = useState(0);
+
   const [error, setError] = useState(null);
 
-  // Close dropdowns on outside click
+  const formatRef = useRef(null);
+  const ratioRef = useRef(null);
+
   useEffect(() => {
     function handleClickOutside(event) {
-      if (ratioRef.current && !ratioRef.current.contains(event.target)) {
-        setIsRatioOpen(false);
+      if (formatRef.current && !formatRef.current.contains(event.target)) {
+        setIsYtFormatOpen(false);
       }
-      if (categoryRef.current && !categoryRef.current.contains(event.target)) {
-        setIsCategoryOpen(false);
+      if (ratioRef.current && !ratioRef.current.contains(event.target)) {
+        setIsClipRatioOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleFileUpload = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const allowedTypes = ["image/png", "image/jpeg", "image/jpg"];
-    if (!allowedTypes.includes(file.type)) {
-      setError("Please upload only PNG, JPG, or JPEG images.");
-      return;
-    }
-
-    if (!session) {
-      signIn();
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError("File size exceeds 5MB limit.");
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-      setError(null);
-
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error("Upload failed.");
-
-      const data = await res.json();
-      if (data.url) {
-        setReferenceImage(data.url);
+  useEffect(() => {
+    const calculateCost = async () => {
+      if (!clipUrl) {
+        setClippingCost(0);
+        return;
       }
-    } catch (err) {
-      setError("Failed to upload image. Try a URL instead.");
-      console.error(err);
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
 
-  const handleGenerate = async () => {
-    if (!session) {
-      signIn();
-      return;
-    }
+      let duration = 300; // Default 5 mins
 
-    if (!referenceImage && !newImageUrl) {
-      setError("Please provide a reference image.");
-      return;
-    }
+      try {
+        // Simple JS logic using video tag as requested
+        const video = document.createElement("video");
+        video.preload = "metadata";
+        
+        const getDuration = () => new Promise((resolve) => {
+          video.onloadedmetadata = () => resolve(video.duration);
+          video.onerror = () => resolve(300);
+          // Set a timeout in case it hangs
+          setTimeout(() => resolve(300), 5000);
+          video.src = clipUrl;
+        });
 
-    const finalImageUrl = referenceImage || newImageUrl;
+        duration = await getDuration();
+      } catch (err) {
+        console.warn("Duration calculation failed, using fallback", err);
+      }
+
+      const minutes = Math.round(duration / 60);
+      const cost = Math.round(((minutes * 0.05) + (numHighlights * 0.05)) * 200);
+      setClippingCost(cost);
+    };
+
+    calculateCost();
+  }, [clipUrl, numHighlights]);
+
+  const handleYtDownload = async () => {
+    if (!session) return signIn();
+    if (!ytUrl) return setError("Please enter a YouTube URL.");
 
     try {
-      setLoading(true);
+      setIsDownloading(true);
       setError(null);
-      setResultUrl(null);
-      setStatusMessage("CALIBRATING SESSION...");
+      setYtResult(null);
 
-      const res = await fetch("/api/headshot", {
+      const res = await fetch("/api/youtube-download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image_url: finalImageUrl,
-          category,
-          aspect_ratio: aspectRatio.value,
-        }),
+        body: JSON.stringify({ video_url: ytUrl, format: ytFormat.value }),
       });
 
       const data = await res.json();
+      if (!res.ok)
+        throw new Error(data.error || "Failed to download YouTube video");
 
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to initiate request.");
+      if (data.request_id) {
+        await pollYtStatus(data.request_id);
+      } else {
+        const downloadedUrl = data.url || data.video_url || data.download_url;
+        if (downloadedUrl) {
+          setYtResult(downloadedUrl);
+          setClipUrl(downloadedUrl); // pass link to clipping tab
+          setActiveTab("clip"); // switch tab
+          setIsDownloading(false);
+        } else {
+          throw new Error("No URL returned from download API");
+        }
       }
-
-      const { request_id } = data;
-      await pollStatus(request_id);
     } catch (err) {
       setError(err.message || "An unexpected error occurred.");
-      setLoading(false);
+      setIsDownloading(false);
     }
   };
 
-  const pollStatus = async (requestId) => {
-    setStatusMessage("DEVELOPING PORTRAIT...");
-
+  const pollYtStatus = async (requestId) => {
     try {
-      const res = await fetch("/api/headshot/status", {
+      const res = await fetch("/api/youtube-download/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId }),
@@ -254,9 +161,77 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error || "Status check failed.");
 
       if (data.status === "completed") {
-        setResultUrl(data.imageUrl);
-        setStatusMessage("");
-        setLoading(false);
+        const downloadedUrl = Array.isArray(data.clips)
+          ? data.clips[0]
+          : data.clips;
+        setYtResult(downloadedUrl);
+        setClipUrl(downloadedUrl); // pass link to clipping tab
+        setActiveTab("clip"); // switch tab
+        setIsDownloading(false);
+      } else if (data.status === "failed") {
+        throw new Error(data.error || "Download failed.");
+      } else {
+        setTimeout(() => pollYtStatus(requestId), 3000);
+      }
+    } catch (err) {
+      setError(err.message || "An error occurred during verification.");
+      setIsDownloading(false);
+    }
+  };
+
+  const handleAiClipping = async () => {
+    if (!session) return signIn();
+    if (!clipUrl) return setError("Please enter a video URL to clip.");
+
+    try {
+      setIsClipping(true);
+      setError(null);
+      setClipResult(null);
+
+      const res = await fetch("/api/ai-clipping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          video_url: clipUrl,
+          num_highlights: numHighlights,
+          aspect_ratio: clipAspectRatio.value,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(data.error || "Failed to initiate AI Clipping");
+
+      if (data.request_id) {
+        await pollStatus(data.request_id);
+      } else if (data.clips) {
+        setClipResult(data.clips);
+        setIsClipping(false);
+      } else {
+        setClipResult(data);
+        setIsClipping(false);
+      }
+    } catch (err) {
+      setError(err.message || "An unexpected error occurred.");
+      setIsClipping(false);
+    }
+  };
+
+  const pollStatus = async (requestId) => {
+    try {
+      const res = await fetch("/api/ai-clipping/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Status check failed.");
+
+      if (data.status === "completed") {
+        setClipResult(data.clips);
+        setIsClipping(false);
       } else if (data.status === "failed") {
         throw new Error(data.error || "Generation failed.");
       } else {
@@ -264,394 +239,336 @@ export default function Home() {
       }
     } catch (err) {
       setError(err.message || "An error occurred during verification.");
-      setLoading(false);
+      setIsClipping(false);
     }
   };
 
   return (
-    <div className="flex flex-col-reverse lg:flex-row flex-1 h-full w-full overflow-y-auto lg:overflow-hidden">
-      <aside className="w-full lg:w-96 border-t lg:border-t-0 lg:border-r border-glass-border bg-glass-bg backdrop-blur-3xl flex flex-col shrink-0 h-auto lg:h-full lg:overflow-y-auto custom-scrollbar">
-        <div className="p-6 border-b border-glass-border space-y-6">
-          <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-black tracking-tight text-foreground drop-shadow-sm">
-              PORTRAIT STUDIO
-            </h2>
-            <p className="text-[10px] text-muted font-medium uppercase tracking-[0.2em]">
-              Professional AI Engine
-            </p>
-          </div>
+    <div className="flex flex-col-reverse lg:flex-row flex-1 h-full w-full overflow-y-auto custom-scrollbar">
+      <div className="flex-1 w-full max-w-2xl mx-auto px-6 py-10 flex flex-col space-y-10">
+        {/* Header Title */}
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            AICLIP Studio
+          </h1>
+          <p className="text-sm text-muted">
+            Download YouTube videos and extract viral highlights.
+          </p>
         </div>
 
-        <div className="flex-1 custom-scrollbar p-6 space-y-6">
-          {/* Style Selector */}
-          <div className="space-y-3" ref={categoryRef}>
-            <label className="text-sm font-medium text-foreground font-semibold flex items-center gap-2">
-              <div className="w-1 h-1 bg-primary-500 rounded-full" /> Style
-              Category
-            </label>
-            <div className="relative">
-              <button
-                onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                className="w-full flex items-center justify-between p-3 bg-glass-bg border border-glass-border hover:bg-glass-hover shadow-sm rounded-lg text-sm font-semibold transition-all outline-none text-foreground backdrop-blur-md"
-              >
-                <div className="flex items-center gap-3">
-                  <FaMagic className="text-primary-500" />
-                  {category}
-                </div>
-                <FaChevronDown
-                  className={`text-[10px] transition-transform duration-300 ${isCategoryOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              <AnimatePresence>
-                {isCategoryOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 5 }}
-                    className="absolute top-12 left-0 right-0 max-h-60 bg-[var(--solid-bg)] border border-glass-border rounded-lg overflow-y-auto custom-scrollbar shadow-2xl z-[100] p-1"
-                  >
-                    {PHOTO_CATEGORIES.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => {
-                          setCategory(cat);
-                          setIsCategoryOpen(false);
-                        }}
-                        className={`w-full text-left p-3 rounded-lg text-sm font-medium transition-all flex items-center gap-3 ${
-                          category === cat
-                            ? "bg-primary-500 text-white shadow-md shadow-primary-500/20"
-                            : "text-muted hover:bg-glass-hover hover:text-foreground"
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Reference Image */}
-          <div className="space-y-4">
-            <label className="text-sm font-medium text-foreground font-semibold flex items-center gap-2">
-              <div className="w-1 h-1 bg-primary-500 rounded-full" /> Reference
-              Image
-            </label>
-
-            {!referenceImage ? (
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    placeholder="Reference Image URL..."
-                    className="flex-1 bg-glass-bg border border-glass-border rounded-lg px-3 py-2 text-[10px] font-bold outline-none focus:border-primary-500/50 text-foreground drop-shadow-sm"
-                  />
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    hidden
-                    accept=".png, .jpg, .jpeg"
-                    onChange={handleFileUpload}
-                  />
-                  <button
-                    onClick={() =>
-                      session ? fileInputRef.current?.click() : signIn()
-                    }
-                    className="w-10 h-10 bg-primary-500/10 border border-primary-500/10 text-primary-500 rounded-lg flex items-center justify-center hover:bg-primary-500 hover:text-white transition-all shadow-sm group"
-                  >
-                    {isUploading ? (
-                      <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <FaPlus className="group-hover:scale-110 transition-transform" />
-                    )}
-                  </button>
-                </div>
-                <div className="p-4 border-2 border-dashed border-glass-border rounded-xl flex flex-col items-center justify-center gap-2 bg-glass-bg/30">
-                  <FaImages className="text-muted text-xl opacity-20" />
-                  <span className="text-[10px] text-muted font-bold uppercase tracking-widest">
-                    Single Photo Required
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="relative aspect-square rounded-2xl bg-glass-bg overflow-hidden group border-2 border-primary-500/20">
-                <img
-                  src={referenceImage}
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  onClick={() => setReferenceImage(null)}
-                  className="absolute top-2 right-2 bg-red-500 p-2 rounded-xl text-white shadow-xl opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-90"
-                >
-                  <FaTrash className="text-xs" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Aspect Ratio */}
-          <div className="space-y-3" ref={ratioRef}>
-            <label className="text-sm font-medium text-foreground font-semibold flex items-center gap-2">
-              <div className="w-1 h-1 bg-primary-500 rounded-full" /> Aspect
-              Ratio
-            </label>
-            <div className="relative">
-              <button
-                onClick={() => setIsRatioOpen(!isRatioOpen)}
-                className="w-full flex items-center justify-between p-3 bg-glass-bg border border-glass-border hover:bg-glass-hover shadow-sm rounded-lg text-sm font-medium transition-all outline-none text-foreground backdrop-blur-md"
-              >
-                <div className="flex items-center gap-3">
-                  <FaExpand className="text-primary-500" />
-                  {aspectRatio.label}
-                </div>
-                <FaChevronDown
-                  className={`text-xs transition-transform duration-300 ${isRatioOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              <AnimatePresence>
-                {isRatioOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 5 }}
-                    className="absolute bottom-12 left-0 right-0 max-h-60 bg-[var(--solid-bg)] border border-glass-border rounded-lg overflow-y-auto custom-scrollbar shadow-2xl z-[100] p-1"
-                  >
-                    {ASPECT_RATIOS.map((ratio) => (
-                      <button
-                        key={ratio.value}
-                        onClick={() => {
-                          setAspectRatio(ratio);
-                          setIsRatioOpen(false);
-                        }}
-                        className={`w-full text-left p-3 rounded-lg text-sm font-medium transition-all flex items-center gap-3 ${
-                          aspectRatio.value === ratio.value
-                            ? "bg-primary-500 text-white shadow-md shadow-primary-500/20"
-                            : "text-muted hover:bg-glass-hover hover:text-foreground"
-                        }`}
-                      >
-                        {ratio.label}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 border-t border-glass-border mt-auto">
+        {/* Custom Tabs Navigation */}
+        <div className="flex items-center gap-2 border-b border-glass-border pb-px">
           <button
-            onClick={handleGenerate}
-            disabled={loading || (!referenceImage && !newImageUrl)}
-            className="w-full bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-xl py-4 font-bold tracking-wider uppercase text-xs flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 shadow-xl shadow-primary-500/30 border border-primary-400/50"
+            onClick={() => setActiveTab("download")}
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 ${
+              activeTab === "download"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-muted hover:text-foreground"
+            }`}
           >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-slate-500 border-t-white rounded-full animate-spin"></div>
-            ) : (
-              <FaBolt className="text-yellow-400" />
-            )}
-            {loading ? "PROCESSING..." : "Generate 60 Credits"}
+            <FaYoutube
+              className={
+                activeTab === "download" ? "text-primary-500" : "text-muted"
+              }
+            />
+            1. Download
+          </button>
+          <button
+            onClick={() => setActiveTab("clip")}
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 ${
+              activeTab === "clip"
+                ? "border-secondary-500 text-secondary-600"
+                : "border-transparent text-muted hover:text-foreground"
+            }`}
+          >
+            <FaCut
+              className={
+                activeTab === "clip" ? "text-secondary-500" : "text-muted"
+              }
+            />
+            2. AI Clipping
           </button>
         </div>
-      </aside>
 
-      {/* Main Canvas */}
-      <main className="flex-1 relative flex flex-col bg-transparent overflow-hidden min-h-[50vh] lg:min-h-0 shrink-0">
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-0 w-[100%] h-[100%] bg-gradient-to-br from-primary-500/[0.03] to-secondary-500/[0.03]" />
-          <div className="absolute top-1/4 left-1/4 w-[60%] h-[60%] bg-primary-500/[0.12] rounded-full blur-[140px] animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-[50%] h-[50%] bg-secondary-500/[0.12] rounded-full blur-[120px]" />
-        </div>
+        {/* Error Alert */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-red-500/10 border border-red-500/20 text-red-500 px-4 py-3 rounded-lg text-sm mb-6 font-medium">
+                {error}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <div className="flex-1 relative z-10 p-12 overflow-y-auto flex items-center justify-center custom-scrollbar">
+        {/* Main Content Area */}
+        <div className="bg-glass-bg border border-glass-border rounded-2xl p-6 sm:p-10 shadow-sm backdrop-blur-3xl">
           <AnimatePresence mode="wait">
-            {!resultUrl && !loading && !error && (
+            {activeTab === "download" ? (
               <motion.div
-                key="empty"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-full h-full flex flex-col items-center justify-center p-4 md:p-12 space-y-12"
+                key="download"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
               >
-                <div className="max-w-md w-full text-center space-y-8">
-                  <div className="relative w-28 h-28 mx-auto group">
-                    <div className="absolute inset-0 bg-primary-500/10 blur-[30px] rounded-full" />
-                    <div className="relative w-full h-full bg-glass-bg border border-glass-border rounded-3xl flex items-center justify-center shadow-sm transition-transform duration-700 group-hover:rotate-12">
-                      <FaMagic className="text-3xl text-slate-200" />
+                <div className="space-y-1">
+                  <h2 className="text-lg font-medium text-foreground">
+                    Extract Video
+                  </h2>
+                  <p className="text-muted text-sm">
+                    Paste a YouTube link to download the source video.
+                  </p>
+                </div>
+
+                <div className="space-y-5">
+                  {/* URL Input */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted uppercase tracking-widest">
+                      YouTube URL
+                    </label>
+                    <div className="relative flex items-center">
+                      <FaYoutube className="absolute left-3 text-muted" />
+                      <input
+                        type="text"
+                        value={ytUrl}
+                        onChange={(e) => setYtUrl(e.target.value)}
+                        placeholder="https://youtube.com/watch?v=..."
+                        className="w-full bg-[var(--solid-bg)] border border-glass-border rounded-lg pl-10 pr-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-shadow text-foreground placeholder-muted"
+                      />
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <h2 className="text-xl font-semibold tracking-tight uppercase text-foreground drop-shadow-sm">
-                      Studio Ready.
-                    </h2>
-                    <p className="text-muted font-medium text-[10px] uppercase tracking-widest leading-loose">
-                      Upload your reference and select a category <br /> to
-                      manifest your professional portrait.
-                    </p>
-                  </div>
-                </div>
 
-                <div className="w-full max-w-6xl mx-auto">
-                  <HeadshotCarousel />
-                </div>
-              </motion.div>
-            )}
-
-            {loading && (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center space-y-12"
-              >
-                <div className="relative">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                    className="w-48 h-48 border-2 border-primary-500/10 rounded-full border-t-primary-500"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <FaBolt className="text-primary-500 animate-pulse text-2xl" />
-                  </div>
-                </div>
-                <div className="text-center space-y-4">
-                  <div className="text-2xl font-black italic uppercase animate-pulse text-foreground drop-shadow-sm">
-                    {statusMessage}
-                  </div>
-                  <div className="inline-block px-4 py-1.5 rounded-full bg-primary-50 text-primary-500 text-[9px] font-black uppercase tracking-widest">
-                    SESSION ACTIVE: 60.0s
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {error && (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="max-w-sm w-full p-10 bg-red-500/[0.02] border-2 border-red-500/10 rounded-3xl text-center space-y-4"
-              >
-                <div className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">
-                  Processing Error
-                </div>
-                <p className="text-muted text-xs font-bold leading-loose text-center">
-                  {error}
-                </p>
-              </motion.div>
-            )}
-
-            {resultUrl && (
-              <motion.div
-                key="result"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-full max-w-5xl"
-              >
-                {Array.isArray(resultUrl) ? (
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-black uppercase tracking-widest text-foreground">
-                        {category} Pack Generated
-                      </h3>
-                      <button
-                        onClick={async () => {
-                          setDownloading(true);
-                          for (let i = 0; i < resultUrl.length; i++) {
-                            await downloadImage(
-                              resultUrl[i],
-                              `headshot-${category}-${i + 1}.jpg`,
-                            );
-                          }
-                          setDownloading(false);
-                        }}
-                        disabled={downloading}
-                        className="px-6 py-2 bg-primary-500 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest flex items-center gap-2 hover:bg-primary-600 transition-all shadow-lg"
-                      >
-                        {downloading
-                          ? "Downloading..."
-                          : "Download Entire Pack"}
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {resultUrl.map((url, idx) => (
-                        <div
-                          key={idx}
-                          className="relative group rounded-2xl overflow-hidden border border-glass-border aspect-[3/4] bg-glass-bg"
-                        >
-                          <img
-                            src={url}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <button
-                              onClick={() =>
-                                downloadImage(
-                                  url,
-                                  `headshot-${category}-${idx + 1}.jpg`,
-                                )
-                              }
-                              className="p-3 bg-white text-black rounded-lg transform scale-90 group-hover:scale-100 transition-transform"
-                            >
-                              <FiDownload />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative group rounded-3xl overflow-hidden shadow-2xl border border-glass-border">
-                    <img
-                      src={resultUrl}
-                      className="max-h-[80vh] w-auto h-auto"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 p-8 flex flex-col justify-end">
-                      <div className="flex items-end justify-between">
-                        <div className="space-y-3">
-                          <h3 className="text-white text-lg font-semibold tracking-tight uppercase">
-                            {category} Portrait
-                          </h3>
-                          <div className="px-3 py-1.5 inline-block rounded-lg bg-glass-bg backdrop-blur-3xl text-[10px] font-semibold text-white">
-                            {aspectRatio.label}
-                          </div>
-                        </div>
-                        <button
-                          onClick={async () => {
-                            setDownloading(true);
-                            await downloadImage(
-                              resultUrl,
-                              `headshot-${category}-${Date.now()}.jpg`,
-                            );
-                            setDownloading(false);
-                          }}
-                          disabled={downloading}
-                          className="p-3 bg-white text-black rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl disabled:opacity-50"
-                        >
-                          {downloading ? (
-                            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <FiDownload className="text-xl" />
-                          )}
-                        </button>
+                  {/* Format Selector */}
+                  <div className="space-y-1.5 relative" ref={formatRef}>
+                    <label className="text-xs font-semibold text-muted uppercase tracking-widest">
+                      Format
+                    </label>
+                    <button
+                      onClick={() => setIsYtFormatOpen(!isYtFormatOpen)}
+                      className="w-full flex items-center justify-between px-4 py-2.5 bg-[var(--solid-bg)] border border-glass-border rounded-lg text-sm transition-colors text-foreground hover:bg-glass-hover"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FaFilm className="text-muted" />
+                        {ytFormat.label}
                       </div>
+                      <FaChevronDown
+                        className={`text-muted transition-transform duration-200 ${isYtFormatOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    <AnimatePresence>
+                      {isYtFormatOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 4 }}
+                          className="absolute bottom-12 left-0 right-0 max-h-60 bg-[var(--solid-bg)] border border-glass-border rounded-lg overflow-y-auto custom-scrollbar shadow-2xl z-[100] p-1"
+                        >
+                          {YT_FORMATS.map((format) => (
+                            <button
+                              key={format.value}
+                              onClick={() => {
+                                setYtFormat(format);
+                                setIsYtFormatOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center hover:bg-glass-hover ${
+                                ytFormat.value === format.value
+                                  ? "text-primary-500 font-medium bg-primary-500/10"
+                                  : "text-muted"
+                              }`}
+                            >
+                              {format.label}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    onClick={handleYtDownload}
+                    disabled={isDownloading || !ytUrl}
+                    className="w-full mt-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg py-3 text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-primary-500/20"
+                  >
+                    {isDownloading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <FaBolt className="text-yellow-400" />
+                        Download Video — 5 Credits
+                      </>
+                    )}
+                  </button>
+
+                  {ytResult && (
+                    <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2 text-green-500 font-medium text-sm">
+                      <FaCheckCircle className="shrink-0" />
+                      <span className="truncate">
+                        Download complete! Link passed to AI Clipping.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="clip"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <div className="space-y-1">
+                  <h2 className="text-lg font-medium text-foreground">
+                    AI Clipping
+                  </h2>
+                  <p className="text-muted text-sm">
+                    Extract viral highlights from your video instantly.
+                  </p>
+                </div>
+
+                <div className="space-y-5">
+                  {/* Video URL Input */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted uppercase tracking-widest">
+                      Source Video URL
+                    </label>
+                    <div className="relative flex items-center">
+                      <FaFilm className="absolute left-3 text-muted" />
+                      <input
+                        type="text"
+                        value={clipUrl}
+                        onChange={(e) => setClipUrl(e.target.value)}
+                        placeholder="Direct video URL..."
+                        className="w-full bg-[var(--solid-bg)] border border-glass-border rounded-lg pl-10 pr-4 py-2.5 text-sm outline-none focus:border-secondary-500 focus:ring-1 focus:ring-secondary-500 transition-shadow text-foreground placeholder-muted"
+                      />
                     </div>
                   </div>
-                )}
+
+                  {/* Settings Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {/* Number of Highlights */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted uppercase tracking-widest flex justify-between">
+                        <span>Highlights</span>
+                        <span className="text-secondary-500 font-bold">
+                          {numHighlights}
+                        </span>
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="60"
+                        value={numHighlights}
+                        onChange={(e) =>
+                          setNumHighlights(Number(e.target.value))
+                        }
+                        className="w-full accent-secondary-500 h-1.5 bg-[var(--glass-border)] rounded-lg appearance-none cursor-pointer mt-2"
+                      />
+                    </div>
+
+                    {/* Aspect Ratio */}
+                    <div className="space-y-1.5 relative" ref={ratioRef}>
+                      <label className="text-xs font-semibold text-muted uppercase tracking-widest">
+                        Aspect Ratio
+                      </label>
+                      <button
+                        onClick={() => setIsClipRatioOpen(!isClipRatioOpen)}
+                        className="w-full flex items-center justify-between px-4 py-2.5 bg-[var(--solid-bg)] border border-glass-border rounded-lg text-sm transition-colors text-foreground hover:bg-glass-hover"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <FaExpand className="text-muted shrink-0" />
+                          <span className="truncate">
+                            {clipAspectRatio.label}
+                          </span>
+                        </div>
+                        <FaChevronDown
+                          className={`text-muted shrink-0 transition-transform duration-200 ${isClipRatioOpen ? "rotate-180" : ""}`}
+                        />
+                      </button>
+
+                      <AnimatePresence>
+                        {isClipRatioOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 4 }}
+                            className="absolute bottom-14 left-0 right-0 max-h-60 bg-[var(--solid-bg)] border border-glass-border rounded-lg overflow-y-auto custom-scrollbar shadow-2xl z-[100] p-1"
+                          >
+                            {ASPECT_RATIOS.map((ratio) => (
+                              <button
+                                key={ratio.value}
+                                onClick={() => {
+                                  setClipAspectRatio(ratio);
+                                  setIsClipRatioOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center hover:bg-glass-hover ${
+                                  clipAspectRatio.value === ratio.value
+                                    ? "text-secondary-500 font-medium bg-secondary-500/10"
+                                    : "text-muted"
+                                }`}
+                              >
+                                {ratio.label}
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    onClick={handleAiClipping}
+                    disabled={isClipping || !clipUrl}
+                    className="w-full mt-2 bg-secondary-500 hover:bg-secondary-600 text-white rounded-lg py-3 text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-secondary-500/20"
+                  >
+                    {isClipping ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Generating Clips...
+                      </>
+                    ) : (
+                      <>
+                        <FaCut />
+                        Generate Highlights {clippingCost > 0 ? `— ${clippingCost} Credits` : ""}
+                      </>
+                    )}
+                  </button>
+
+                  {/* Results Display */}
+                  {clipResult && (
+                    <div className="mt-6 p-4 bg-[var(--solid-bg)] border border-glass-border rounded-lg space-y-2">
+                      <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest">
+                        Task Dispatched
+                      </h3>
+                      <p className="text-sm text-muted">
+                        Your clips are being generated. Check the My Clips tab
+                        to view them once finished.
+                      </p>
+                      <pre className="text-xs text-muted overflow-auto pt-2 mt-2 border-t border-glass-border font-mono">
+                        {JSON.stringify(clipResult, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-      </main>
-
+      </div>
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 2px;

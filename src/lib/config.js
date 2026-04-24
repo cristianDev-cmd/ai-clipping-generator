@@ -26,9 +26,10 @@ const config = {
     }
   },
   ai: {
-    headshot: {
-      apiKey: process.env.HEADSHOT_API_KEY,
-      endpoint: "https://api.muapi.ai/api/v1/photo-pack",
+    aiclips: {
+      apiKey: process.env.AICLIPS_API_KEY,
+      youtubeEndpoint: "https://api.muapi.ai/api/v1/youtube-download",
+      clippingEndpoint: "https://api.muapi.ai/api/v1/ai-clipping",
     }
   },
   db: {
