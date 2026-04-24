@@ -114,6 +114,16 @@ export function Navbar() {
         ) : (
           <LoginButton className="!h-10 !px-6 !text-[10px] !tracking-widest !font-bold" />
         )}
+
+        <a 
+          href="https://vercel.com/new/clone?repository-url=https://github.com/SamurAIGPT/ai-clipping-generator"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white hover:bg-slate-800 transition-all font-bold text-[10px] tracking-widest uppercase shadow-lg shadow-slate-900/10"
+        >
+          <SiVercel className="text-xs" />
+          Deploy
+        </a>
         
         {/* Mobile menu toggle */}
         <button 
