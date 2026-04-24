@@ -4,7 +4,7 @@
 
 ## 🌐 Live Manifestation
 
-**[Experience the full glassmorphic, responsive interface here](https://aiclips-generator.vercel.app/)**. Sign in with Google to explore the Video Studio, My Clips archive, and Credits dashboard directly from your browser.
+**[Experience the full glassmorphic, responsive interface here](https://ai-clipping-generator.vercel.app/)**. Sign in with Google to explore the Video Studio, My Clips archive, and Credits dashboard directly from your browser.
 
 ---
 
@@ -18,6 +18,8 @@
 - **Historical Archive** — All creations are securely persisted to a PostgreSQL database for a customized user gallery.
 - **Premium Glassmorphic UX** — Dynamic multi-theme support (Indigo, Emerald, Rose, Amber) with high-fidelity micro-animations.
 - **Event-Driven Architecture** — Robust webhook-based status updates for reliable long-running AI tasks.
+
+![AICLIPS Studio](https://cdn.muapi.ai/data/2/883345778103/cca8b5bb-25f1-40fe-928e-53dce2c8c928.png)
 
 ## ✨ Core Features
 
