@@ -2,6 +2,11 @@
 
 > **A beautifully designed, fully-integrated AI clipping studio.** Built with Next.js, this platform serves as a complete SaaS boilerplate for downloading YouTube videos and automatically extracting viral highlights for TikTok, Reels, and Shorts.
 
+## Related Projects
+
+- [ai-clipping-comfyui](https://github.com/Anil-matcha/ai-clipping-comfyui) — Same AI clipping capability as ComfyUI nodes
+- [AI-Youtube-Shorts-Generator](https://github.com/SamurAIGPT/AI-Youtube-Shorts-Generator) — Full open-source YouTube Shorts generator with virality ranking
+
 ## 🌐 Live Manifestation
 
 **[Experience the full glassmorphic, responsive interface here](https://ai-clipping-generator.vercel.app/)**. Sign in with Google to explore the Video Studio, My Clips archive, and Credits dashboard directly from your browser.
