@@ -4,6 +4,7 @@
  */
 
 const config = {
+  appName: "Aiclips Generator",
   auth: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID,
