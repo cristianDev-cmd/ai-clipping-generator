@@ -92,7 +92,7 @@ export default function CreationsPage() {
               <h3 className="text-xl font-bold italic text-foreground">COLLECTION EMPTY</h3>
               <button
                 onClick={() => router.push("/")}
-                className="px-8 py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-primary-500/20"
+                className="px-8 py-3 bg-primary hover:bg-primary-hover text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-primary/20"
               >
                 Start your first Manifestation
               </button>
@@ -131,7 +131,7 @@ export default function CreationsPage() {
                             Pack of {urls.length}
                           </div>
                         )}
-                        <div className="absolute top-2 left-2 px-2 py-1 bg-primary-500/80 rounded-md text-[7px] font-black text-white uppercase tracking-widest backdrop-blur-md">
+                        <div className="absolute top-2 left-2 px-2 py-1 bg-primary/80 rounded-md text-[7px] font-black text-white uppercase tracking-widest backdrop-blur-md">
                           {item.type === "youtube_download" ? "YT Download" : "AI Highlight"}
                         </div>
                       </div>
@@ -144,7 +144,7 @@ export default function CreationsPage() {
                       </div>
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center bg-glass-hover gap-4">
-                        <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+                        <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                         <span className="text-[9px] font-black text-muted uppercase tracking-[0.2em] animate-pulse">Manifesting...</span>
                       </div>
                     )}
@@ -226,7 +226,7 @@ export default function CreationsPage() {
                   </div>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-glass-hover gap-6">
-                    <div className="w-20 h-20 border-4 border-primary-500/10 border-t-primary-500 rounded-full animate-spin" />
+                    <div className="w-20 h-20 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />
                   </div>
                 )}
               </div>
@@ -281,7 +281,7 @@ export default function CreationsPage() {
                       setDownloading(false);
                     }}
                     disabled={downloading || selectedClip.status !== "completed"}
-                    className="w-full py-3 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-lg font-bold tracking-wider uppercase text-[10px] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 shadow-xl shadow-primary-500/20 border border-primary-400/50"
+                    className="w-full py-3 bg-gradient-to-r from-primary to-primary-hover text-white rounded-lg font-bold tracking-wider uppercase text-[10px] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 shadow-xl shadow-primary/20 border border-primary/20"
                   >
                     {downloading ? (
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />

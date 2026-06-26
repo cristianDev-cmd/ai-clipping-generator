@@ -262,13 +262,13 @@ export default function Home() {
             onClick={() => setActiveTab("download")}
             className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 ${
               activeTab === "download"
-                ? "border-primary-500 text-primary-600"
+                ? "border-primary text-primary"
                 : "border-transparent text-muted hover:text-foreground"
             }`}
           >
             <FaYoutube
               className={
-                activeTab === "download" ? "text-primary-500" : "text-muted"
+                activeTab === "download" ? "text-primary" : "text-muted"
               }
             />
             1. Download
@@ -277,13 +277,13 @@ export default function Home() {
             onClick={() => setActiveTab("clip")}
             className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 ${
               activeTab === "clip"
-                ? "border-secondary-500 text-secondary-600"
+                ? "border-secondary text-secondary"
                 : "border-transparent text-muted hover:text-foreground"
             }`}
           >
             <FaCut
               className={
-                activeTab === "clip" ? "text-secondary-500" : "text-muted"
+                activeTab === "clip" ? "text-secondary" : "text-muted"
               }
             />
             2. AI Clipping
@@ -396,7 +396,7 @@ export default function Home() {
                   <button
                     onClick={handleYtDownload}
                     disabled={isDownloading || !ytUrl}
-                    className="w-full mt-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg py-3 text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-primary-500/20"
+                    className="w-full mt-2 bg-primary hover:bg-primary-hover text-white rounded-lg py-3 text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-primary/20"
                   >
                     {isDownloading ? (
                       <>
@@ -533,7 +533,7 @@ export default function Home() {
                   <button
                     onClick={handleAiClipping}
                     disabled={isClipping || !clipUrl}
-                    className="w-full mt-2 bg-secondary-500 hover:bg-secondary-600 text-white rounded-lg py-3 text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-secondary-500/20"
+                    className="w-full mt-2 bg-secondary hover:bg-secondary-hover text-white rounded-lg py-3 text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-secondary/20"
                   >
                     {isClipping ? (
                       <>
