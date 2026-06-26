@@ -257,7 +257,7 @@ export default function Home() {
         </div>
 
         {/* Custom Tabs Navigation */}
-        <div className="flex items-center gap-2 border-b border-glass-border pb-px">
+        <div className="flex items-center gap-2 border-b border-divider/50 pb-px">
           <button
             onClick={() => setActiveTab("download")}
             className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 ${
@@ -307,7 +307,7 @@ export default function Home() {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <div className="bg-glass-bg border border-glass-border rounded-2xl p-6 sm:p-10 shadow-sm backdrop-blur-3xl">
+        <div className="bg-bg-card border border-divider/50 rounded-2xl p-6 sm:p-10 shadow-md">
           <AnimatePresence mode="wait">
             {activeTab === "download" ? (
               <motion.div
@@ -340,7 +340,7 @@ export default function Home() {
                         value={ytUrl}
                         onChange={(e) => setYtUrl(e.target.value)}
                         placeholder="https://youtube.com/watch?v=..."
-                        className="w-full bg-[var(--solid-bg)] border border-glass-border rounded-lg pl-10 pr-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-shadow text-foreground placeholder-muted"
+                        className="w-full bg-bg-elevated border border-divider/50 rounded-lg pl-10 pr-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-shadow text-foreground placeholder-muted"
                       />
                     </div>
                   </div>
@@ -352,7 +352,7 @@ export default function Home() {
                     </label>
                     <button
                       onClick={() => setIsYtFormatOpen(!isYtFormatOpen)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 bg-[var(--solid-bg)] border border-glass-border rounded-lg text-sm transition-colors text-foreground hover:bg-glass-hover"
+                      className="w-full flex items-center justify-between px-4 py-2.5 bg-bg-elevated border border-divider/50 rounded-lg text-sm transition-colors text-foreground hover:bg-bg-card-hover"
                     >
                       <div className="flex items-center gap-2">
                         <FaFilm className="text-muted" />
@@ -369,7 +369,7 @@ export default function Home() {
                           initial={{ opacity: 0, y: 4 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 4 }}
-                          className="absolute bottom-12 left-0 right-0 max-h-60 bg-[var(--solid-bg)] border border-glass-border rounded-lg overflow-y-auto custom-scrollbar shadow-2xl z-[100] p-1"
+                          className="absolute bottom-12 left-0 right-0 max-h-60 bg-bg-elevated border border-divider/50 rounded-lg overflow-y-auto custom-scrollbar shadow-2xl z-[100] p-1"
                         >
                           {YT_FORMATS.map((format) => (
                             <button
@@ -378,7 +378,7 @@ export default function Home() {
                                 setYtFormat(format);
                                 setIsYtFormatOpen(false);
                               }}
-                              className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center hover:bg-glass-hover ${
+                              className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center hover:bg-bg-card-hover ${
                                 ytFormat.value === format.value
                                   ? "text-primary-500 font-medium bg-primary-500/10"
                                   : "text-muted"
@@ -452,7 +452,7 @@ export default function Home() {
                         value={clipUrl}
                         onChange={(e) => setClipUrl(e.target.value)}
                         placeholder="Direct video URL..."
-                        className="w-full bg-[var(--solid-bg)] border border-glass-border rounded-lg pl-10 pr-4 py-2.5 text-sm outline-none focus:border-secondary-500 focus:ring-1 focus:ring-secondary-500 transition-shadow text-foreground placeholder-muted"
+                        className="w-full bg-bg-elevated border border-divider/50 rounded-lg pl-10 pr-4 py-2.5 text-sm outline-none focus:border-secondary-500 focus:ring-1 focus:ring-secondary-500 transition-shadow text-foreground placeholder-muted"
                       />
                     </div>
                   </div>
@@ -475,7 +475,7 @@ export default function Home() {
                         onChange={(e) =>
                           setNumHighlights(Number(e.target.value))
                         }
-                        className="w-full accent-secondary-500 h-1.5 bg-[var(--glass-border)] rounded-lg appearance-none cursor-pointer mt-2"
+                        className="w-full accent-secondary-500 h-1.5 bg-divider/30 rounded-lg appearance-none cursor-pointer mt-2"
                       />
                     </div>
 
@@ -486,7 +486,7 @@ export default function Home() {
                       </label>
                       <button
                         onClick={() => setIsClipRatioOpen(!isClipRatioOpen)}
-                        className="w-full flex items-center justify-between px-4 py-2.5 bg-[var(--solid-bg)] border border-glass-border rounded-lg text-sm transition-colors text-foreground hover:bg-glass-hover"
+                        className="w-full flex items-center justify-between px-4 py-2.5 bg-bg-elevated border border-divider/50 rounded-lg text-sm transition-colors text-foreground hover:bg-bg-card-hover"
                       >
                         <div className="flex items-center gap-2 truncate">
                           <FaExpand className="text-muted shrink-0" />
@@ -505,7 +505,7 @@ export default function Home() {
                             initial={{ opacity: 0, y: 4 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 4 }}
-                            className="absolute bottom-14 left-0 right-0 max-h-60 bg-[var(--solid-bg)] border border-glass-border rounded-lg overflow-y-auto custom-scrollbar shadow-2xl z-[100] p-1"
+                            className="absolute bottom-14 left-0 right-0 max-h-60 bg-bg-elevated border border-divider/50 rounded-lg overflow-y-auto custom-scrollbar shadow-2xl z-[100] p-1"
                           >
                             {ASPECT_RATIOS.map((ratio) => (
                               <button
@@ -514,7 +514,7 @@ export default function Home() {
                                   setClipAspectRatio(ratio);
                                   setIsClipRatioOpen(false);
                                 }}
-                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center hover:bg-glass-hover ${
+                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center hover:bg-bg-card-hover ${
                                   clipAspectRatio.value === ratio.value
                                     ? "text-secondary-500 font-medium bg-secondary-500/10"
                                     : "text-muted"
@@ -550,7 +550,7 @@ export default function Home() {
 
                   {/* Results Display */}
                   {clipResult && (
-                    <div className="mt-6 p-4 bg-[var(--solid-bg)] border border-glass-border rounded-lg space-y-2">
+                    <div className="mt-6 p-4 bg-bg-elevated border border-divider/50 rounded-lg space-y-2">
                       <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest">
                         Task Dispatched
                       </h3>
@@ -558,7 +558,7 @@ export default function Home() {
                         Your clips are being generated. Check the My Clips tab
                         to view them once finished.
                       </p>
-                      <pre className="text-xs text-muted overflow-auto pt-2 mt-2 border-t border-glass-border font-mono">
+                      <pre className="text-xs text-muted overflow-auto pt-2 mt-2 border-t border-divider/30 font-mono">
                         {JSON.stringify(clipResult, null, 2)}
                       </pre>
                     </div>

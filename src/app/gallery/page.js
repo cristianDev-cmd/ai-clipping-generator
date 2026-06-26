@@ -85,7 +85,7 @@ export default function CreationsPage() {
       <div className="max-w-7xl mx-auto">
         {creations.length === 0 ? (
           <div className="py-32 flex flex-col items-center justify-center text-center space-y-8">
-            <div className="w-20 h-20 rounded-3xl bg-glass-bg border border-glass-border flex items-center justify-center shadow-sm">
+            <div className="w-20 h-20 rounded-3xl bg-bg-card border border-divider/50 flex items-center justify-center shadow-sm">
               <FaMagic className="text-3xl text-muted" />
             </div>
             <div className="space-y-4">
@@ -112,7 +112,7 @@ export default function CreationsPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="group relative rounded-xl bg-glass-bg backdrop-blur-3xl border border-glass-border aspect-square cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow transition-all"
+                    className="group relative rounded-xl bg-bg-card border border-divider/50 aspect-square cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow transition-all"
                     onClick={() => setSelectedClip({ ...item, urls })}
                   >
                     {item.status === "completed" ? (
@@ -156,7 +156,7 @@ export default function CreationsPage() {
                         <span className="text-[9px] font-semibold text-primary-400 uppercase tracking-widest">
                           {item.aspectRatio || item.resolution}
                         </span>
-                        <div className="w-8 h-8 rounded-lg bg-glass-bg backdrop-blur-3xl/10 backdrop-blur-md flex items-center justify-center text-white">
+                        <div className="w-8 h-8 rounded-lg bg-bg-elevated border border-divider/30 flex items-center justify-center text-white">
                           <FaExpandAlt className="text-[10px]" />
                         </div>
                       </div>
@@ -182,17 +182,17 @@ export default function CreationsPage() {
             <motion.div
               initial={{ opacity: 0, scale: 0.98, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="relative max-w-6xl w-full h-full bg-glass-bg backdrop-blur-3xl border border-glass-border rounded-xl overflow-hidden flex flex-col md:flex-row shadow-2xl"
+              className="relative max-w-6xl w-full h-full bg-bg-card border border-divider/50 rounded-xl overflow-hidden flex flex-col md:flex-row shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Video Side */}
-              <div className="flex w-full md:w-[50%] h-[50%] md:h-full p-2 bg-glass-bg backdrop-blur-3xl flex border-b md:border-b-0 md:border-r border-glass-border overflow-y-auto custom-scrollbar">
+              <div className="flex w-full md:w-[50%] h-[50%] md:h-full p-2 bg-bg-card flex border-b md:border-b-0 md:border-r border-divider/50 overflow-y-auto custom-scrollbar">
                 {selectedClip.status === "completed" ? (
                   <div className="w-full flex flex-col gap-6">
                     {selectedClip.urls.length > 1 ? (
                       <div className="grid grid-cols-2 gap-2">
                         {selectedClip.urls.map((url, idx) => (
-                          <div key={idx} className="relative group rounded-lg overflow-hidden border border-glass-border aspect-[3/4]">
+                          <div key={idx} className="relative group rounded-lg overflow-hidden border border-divider/30 aspect-[3/4]">
                             <video src={url} className="w-full h-full object-cover" muted loop autoPlay playsInline />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                               <button
@@ -232,7 +232,7 @@ export default function CreationsPage() {
               </div>
 
               {/* Details Side */}
-              <div className="flex w-full md:w-[50%] h-[50%] md:h-full p-6 flex flex-col bg-glass-bg backdrop-blur-3xl overflow-y-auto custom-scrollbar">
+              <div className="flex w-full md:w-[50%] h-[50%] md:h-full p-6 flex flex-col bg-bg-card overflow-y-auto custom-scrollbar">
                 <div className="flex flex-col justify-center space-y-4">
                   <div className="space-y-2">
                     <div className="text-[9px] font-semibold text-muted uppercase tracking-widest flex items-center gap-2">
