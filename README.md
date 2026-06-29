@@ -10,6 +10,10 @@
 
 > 🎨 **[Explore 50+ more open-source AI apps →](https://github.com/Anil-matcha/awesome-generative-ai-apps)**
 
+<p align="center">
+  <video src="https://cdn.muapi.ai/github-videos/aiclips-generator.mp4" width="100%" controls autoplay loop muted></video>
+</p>
+
 ## Related Projects
 
 - [ai-clipping-comfyui](https://github.com/Anil-matcha/ai-clipping-comfyui) — Same AI clipping capability as ComfyUI nodes
