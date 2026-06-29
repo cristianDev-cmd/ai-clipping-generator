@@ -10,9 +10,7 @@
 
 > 🎨 **[Explore 50+ more open-source AI apps →](https://github.com/Anil-matcha/awesome-generative-ai-apps)**
 
-<p align="center">
-  <video src="https://cdn.muapi.ai/github-videos/aiclips-generator.mp4" width="100%" controls autoplay loop muted></video>
-</p>
+https://github.com/user-attachments/assets/018738b8-af50-4a08-a7ac-1090b5b1f903
 
 ## Related Projects
 
@@ -83,7 +81,7 @@ To successfully deploy and run, you must populate the following environment vari
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/SamurAIGPT/aiclips-generator
+git clone https://github.com/SamurAIGPT/ai-clipping-generator
 cd aiclips-generator
 
 # 2. Install dependencies
