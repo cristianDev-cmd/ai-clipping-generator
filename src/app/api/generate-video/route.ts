@@ -1,0 +1,258 @@
+import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenAI } from "@google/genai";
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { image, prompt, videoModel, copyModel } = body;
+
+    // Validación básica de parámetros
+    if (!image || !prompt || !videoModel || !copyModel) {
+      return NextResponse.json(
+        { error: "Faltan parámetros requeridos (image, prompt, videoModel, copyModel)." },
+        { status: 400 }
+      );
+    }
+
+    // =========================================================================
+    // FASE 2 - ACOPLAMIENTO DE PRISMA Y MERCADO PAGO:
+    // 1. Validar la sesión del usuario (NextAuth / getServerSession).
+    //    const session = await getServerSession(authOptions);
+    //    if (!session?.user) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    // 
+    // 2. Verificar el estado de la suscripción del usuario en la base de datos (Prisma).
+    //    const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+    //    if (!user?.subscriptionActive) {
+    //      return NextResponse.json({ error: "Suscripción mensual inactiva (50,000 ARS/mes). Por favor, suscríbete para acceder." }, { status: 403 });
+    //    }
+    //
+    // 3. Verificar que el usuario posea créditos suficientes para la generación.
+    //    if (user.credits < 1) {
+    //      return NextResponse.json({ error: "Créditos insuficientes para esta generación." }, { status: 403 });
+    //    }
+    //
+    // 4. Descontar créditos en la base de datos.
+    //    await prisma.user.update({
+    //      where: { id: user.id },
+    //      data: { credits: { decrement: 1 } }
+    //    });
+    // =========================================================================
+
+    // FASE 1: Inicialización híbrida e inteligente de Google Gen AI SDK
+    let ai: GoogleGenAI;
+    const vertexCredentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.trim();
+    const vertexProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID?.trim();
+    const studioApiKey = process.env.GOOGLE_STUDIO_API_KEY?.trim();
+
+    const hasVertexCreds = vertexCredentialsJson && 
+      vertexCredentialsJson !== "" && 
+      vertexCredentialsJson !== '""' && 
+      vertexCredentialsJson !== "''";
+
+    const hasVertexProject = vertexProjectId && 
+      vertexProjectId !== "" && 
+      vertexProjectId !== '""' && 
+      vertexProjectId !== "''";
+
+    if (hasVertexCreds && hasVertexProject) {
+      console.log("[IA_INTEGRATION] Inicializando en modo Vertex AI (Google Cloud)...");
+      try {
+        const credentials = JSON.parse(vertexCredentialsJson);
+        ai = new GoogleGenAI({
+          vertexai: true,
+          project: vertexProjectId,
+          location: process.env.GOOGLE_CLOUD_LOCATION || "us-central1",
+          googleAuthOptions: {
+            credentials,
+          },
+        });
+      } catch (parseErr: any) {
+        console.error("[IA_INTEGRATION] Error parseando GOOGLE_APPLICATION_CREDENTIALS_JSON:", parseErr);
+        return NextResponse.json(
+          { error: "Error al configurar Vertex AI. El JSON de las credenciales de Google Cloud no es válido." },
+          { status: 500 }
+        );
+      }
+    } else if (studioApiKey) {
+      console.log("[IA_INTEGRATION] Inicializando en modo Google AI Studio...");
+      ai = new GoogleGenAI({
+        apiKey: studioApiKey,
+      });
+    } else {
+      console.error("[IA_INTEGRATION] Error: No se configuró Vertex AI ni AI Studio en el entorno.");
+      return NextResponse.json(
+        {
+          error: "Falta configuración de IA en el servidor. Defina GOOGLE_STUDIO_API_KEY o las credenciales de Vertex AI (GOOGLE_APPLICATION_CREDENTIALS_JSON y GOOGLE_CLOUD_PROJECT_ID) en su archivo de entorno.",
+        },
+        { status: 500 }
+      );
+    }
+
+    // Extraer datos Base64 de la imagen
+    const match = image.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) {
+      return NextResponse.json(
+        { error: "Formato de imagen inválido. Debe ser una URI Base64 válida." },
+        { status: 400 }
+      );
+    }
+    const mimeType = match[1];
+    const base64Data = match[2];
+
+    console.log(`[IA_INTEGRATION] Iniciando generación de video con modelo: ${videoModel}`);
+    
+    // 1. Iniciar la generación del video con Veo
+    const isVeo31 = videoModel.includes("veo-3.1");
+    const videoConfig: any = {
+      aspectRatio: "9:16",
+      durationSeconds: 5,
+    };
+    
+    // Solo habilitar generación de audio si el modelo es Veo 3.1
+    if (isVeo31) {
+      videoConfig.generateAudio = true;
+    }
+
+    let videoOp;
+    try {
+      videoOp = await ai.models.generateVideos({
+        model: videoModel,
+        image: {
+          imageBytes: base64Data,
+          mimeType: mimeType,
+        },
+        prompt: prompt,
+        config: videoConfig,
+      });
+    } catch (veoErr: any) {
+      console.error("[IA_INTEGRATION] Error en llamada inicial a la API de Veo:", veoErr);
+      return NextResponse.json(
+        { error: `Error al iniciar la generación de video en el proveedor seleccionado: ${veoErr.message || veoErr}` },
+        { status: 500 }
+      );
+    }
+
+    console.log(`[IA_INTEGRATION] Iniciando generación de copys con modelo: ${copyModel}`);
+    
+    // 2. Llamar a Gemini para generar las 3 propuestas de copys en paralelo
+    const copyPromise = ai.models.generateContent({
+      model: copyModel,
+      contents: [
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType: mimeType,
+          },
+        },
+        "Genera exactamente 3 propuestas de descripción y hashtags virales para un post de Instagram Reels basándote en esta imagen. El tono debe ser muy persuasivo, moderno y enfocado en generar alto engagement. Retorna la respuesta estrictamente en un formato JSON que sea un array con 3 strings. Ejemplo: [\"propuesta 1...\", \"propuesta 2...\", \"propuesta 3...\"]. No agregues markdown ni bloques de código extra.",
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "ARRAY",
+          items: {
+            type: "STRING",
+          },
+          description: "3 propuestas de descripciones para Instagram Reels con hashtags.",
+        },
+      },
+    });
+
+    // 3. Polling de la operación de Veo para esperar a que termine
+    let secondsElapsed = 0;
+    const pollingInterval = 5000; // 5 segundos
+    const maxTimeout = 180000; // 3 minutos máximo
+
+    try {
+      while (!videoOp.done) {
+        if (secondsElapsed >= maxTimeout) {
+          throw new Error("La generación de video superó el tiempo límite de espera de 3 minutos.");
+        }
+        await new Promise((resolve) => setTimeout(resolve, pollingInterval));
+        secondsElapsed += pollingInterval;
+        console.log(`[IA_INTEGRATION] Esperando video... (${secondsElapsed / 1000}s transcurridos)`);
+        videoOp = await ai.operations.getVideosOperation({ operation: videoOp });
+      }
+    } catch (pollErr: any) {
+      console.error("[IA_INTEGRATION] Error durante el polling del video:", pollErr);
+      return NextResponse.json(
+        { error: `Error durante el procesamiento del video en la nube: ${pollErr.message || pollErr}` },
+        { status: 500 }
+      );
+    }
+
+    if (videoOp.error) {
+      console.error("[IA_INTEGRATION] Error reportado por el servicio de video:", videoOp.error);
+      return NextResponse.json(
+        { error: `La generación de video falló en el proveedor: ${videoOp.error.message || JSON.stringify(videoOp.error)}` },
+        { status: 500 }
+      );
+    }
+
+    console.log("[IA_INTEGRATION] videoOp.response:", JSON.stringify(videoOp.response, null, 2));
+
+    const videoObj = videoOp.response?.generatedVideos?.[0]?.video;
+    let videoUrl = "";
+
+    if (videoObj?.videoBytes) {
+      console.log("[IA_INTEGRATION] Video recibido en formato bytes (Base64).");
+      const mime = videoObj.mimeType || "video/mp4";
+      videoUrl = `data:${mime};base64,${videoObj.videoBytes}`;
+    } else if (videoObj?.uri) {
+      console.log("[IA_INTEGRATION] Video recibido como URI:", videoObj.uri);
+      videoUrl = videoObj.uri;
+    }
+
+    if (!videoUrl) {
+      return NextResponse.json(
+        { 
+          error: "No se recibió la URL ni los bytes del video de salida tras completarse la operación.",
+          debugResponse: videoOp.response
+        },
+        { status: 500 }
+      );
+    }
+
+    // Esperar la respuesta de Gemini y parsear los copys
+    let captions: string[] = [];
+    try {
+      const copyResponse = await copyPromise;
+      captions = JSON.parse(copyResponse.text || "[]");
+    } catch (e: any) {
+      console.error("[IA_INTEGRATION] Error parseando JSON de copys de Gemini:", e);
+      captions = [
+        "¡Mira este increíble video generado por IA! 🚀✨ #AIReels #Veo3",
+        "Animando mis imágenes con el modelo Veo 3.1 de Google. 🎥🔥 #InteligenciaArtificial #VideoGeneration",
+        "El futuro del contenido ya está aquí. ¿Qué te parece esta animación? 👇 #Innovation #CreativeAI"
+      ];
+    }
+
+    // =========================================================================
+    // FASE 2 - REGISTRO EN BASE DE DATOS (PRISMA):
+    // Guardar la creación con estado completado.
+    // await prisma.creation.create({
+    //   data: {
+    //     userId: session.user.id,
+    //     type: "veo_video",
+    //     imageUrl: "URL_DE_SUPABASE_STORAGE_DESDE_ETAPA_ANTERIOR",
+    //     prompt,
+    //     resultUrl: videoUrl,
+    //     captions: JSON.stringify(captions),
+    //     status: "completed"
+    //   }
+    // });
+    // =========================================================================
+
+    return NextResponse.json({
+      success: true,
+      videoUrl,
+      captions,
+    });
+  } catch (error: any) {
+    console.error("[GLOBAL_ROUTE_ERROR]", error);
+    return NextResponse.json(
+      { error: error.message || "Ocurrió un error interno e inesperado al procesar la solicitud." },
+      { status: 500 }
+    );
+  }
+}
