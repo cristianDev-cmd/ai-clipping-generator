@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { uploadMediaToSupabase } from "@/lib/storage";
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,12 +35,43 @@ export async function POST(req: NextRequest) {
     const firstImgData = firstImgMatch[2];
 
     // =========================================================================
-    // FASE 2 - ACOPLAMIENTO DE PRISMA Y MERCADO PAGO:
-    // 1. Validar la sesión del usuario (NextAuth / getServerSession).
-    // 2. Verificar el estado de la suscripción del usuario en la base de datos (Prisma).
-    // 3. Verificar que el usuario posea créditos suficientes para la generación.
-    // 4. Descontar créditos en la base de datos.
+    // FASE 2: Validación de Sesión y Descuento de Créditos (Prisma)
     // =========================================================================
+    const session = await getServerSession(authOptions);
+    let userId = "guest";
+    let isUserLoggedIn = false;
+
+    if (session?.user?.id) {
+      userId = session.user.id;
+      isUserLoggedIn = true;
+      console.log(`[IA_INTEGRATION] Usuario autenticado detectado: ${userId}. Verificando créditos...`);
+      
+      try {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: userId }
+        });
+        
+        if (!dbUser || dbUser.credits < 1) {
+          return NextResponse.json(
+            { error: "Créditos insuficientes. Por favor adquiere más créditos para continuar." },
+            { status: 403 }
+          );
+        }
+        
+        // Descontar 1 crédito de forma preventiva
+        await prisma.user.update({
+          where: { id: userId },
+          data: { credits: dbUser.credits - 1 }
+        });
+        console.log(`[IA_INTEGRATION] Crédito descontado correctamente. Créditos restantes: ${dbUser.credits - 1}`);
+      } catch (dbErr) {
+        console.error("[IA_INTEGRATION] Error interactuando con la base de datos (créditos):", dbErr);
+        // Si hay una base de datos mal configurada localmente pero hay sesión,
+        // permitimos seguir en la demo sin bloquear, pero logueando el error.
+      }
+    } else {
+      console.log("[IA_INTEGRATION] Ejecutando en Modo Demo pública (sin inicio de sesión). Saltando validación de créditos.");
+    }
 
     // FASE 1: Inicialización híbrida e inteligente de Google Gen AI SDK
     let ai: GoogleGenAI;
@@ -143,7 +178,7 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    console.log(`[IA_INTEGRATION] Iniciando generación de video con modelo: ${videoModel} y duración: ${validDuration}s`);
+    console.log(`[IA_INTEGRATION] Iniciando generación de video con modelo: ${videoModel} y duración: ${targetDuration}s`);
     
     // 1. Iniciar la generación del video con Veo
     let videoOp;
@@ -253,9 +288,59 @@ export async function POST(req: NextRequest) {
     }
 
     // =========================================================================
-    // FASE 2 - REGISTRO EN BASE DE DATOS (PRISMA):
-    // ... (notas de base de datos)
+    // FASE 2: Persistencia a Supabase Storage y Registro en Base de Datos (Prisma)
     // =========================================================================
+    if (isUserLoggedIn) {
+      console.log(`[IA_INTEGRATION] Iniciando persistencia persistente para usuario: ${userId}`);
+      try {
+        const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // 1. Subir la imagen de referencia principal (o imágenes unidas) a Supabase Storage
+        const publicImageUrls: string[] = [];
+        for (let i = 0; i < imagesList.length; i++) {
+          const mime = i === 3 ? "image/jpeg" : "image/jpeg"; // o inferir
+          const uploadedImgUrl = await uploadMediaToSupabase(
+            imagesList[i],
+            mime,
+            `creations/${userId}/${uniqueId}-ref-${i}.jpg`
+          );
+          if (uploadedImgUrl) publicImageUrls.push(uploadedImgUrl);
+        }
+
+        const finalImagesUrl = publicImageUrls.length > 0 ? publicImageUrls.join(",") : null;
+
+        // 2. Subir el video generado (Base64 o URI remota) a Supabase Storage
+        const videoMime = videoObj?.mimeType || "video/mp4";
+        const publicVideoUrl = await uploadMediaToSupabase(
+          videoUrl,
+          videoMime,
+          `creations/${userId}/${uniqueId}-result.mp4`
+        );
+
+        // 3. Crear el registro de creación en Prisma
+        if (publicVideoUrl) {
+          const creation = await prisma.creation.create({
+            data: {
+              userId: userId,
+              type: "veo_video",
+              resultUrl: publicVideoUrl,
+              imageUrl: finalImagesUrl,
+              prompt: prompt,
+              captions: JSON.stringify(captions),
+              aspectRatio: targetAspectRatio,
+              status: "completed"
+            }
+          });
+          console.log(`[IA_INTEGRATION] Creación guardada en Prisma con ID: ${creation.id}`);
+        } else {
+          console.warn("[IA_INTEGRATION] Supabase no devolvió URL de video. Saltando creación de fila en Prisma.");
+        }
+      } catch (saveErr) {
+        console.error("[IA_INTEGRATION] Error durante la persistencia en Supabase / Prisma:", saveErr);
+        // No arrojamos un error 500 al cliente si la IA ya funcionó correctamente,
+        // para no frustrar la experiencia de usuario si el almacenamiento falla.
+      }
+    }
 
     return NextResponse.json({
       success: true,

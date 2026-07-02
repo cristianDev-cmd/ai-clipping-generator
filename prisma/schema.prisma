@@ -47,18 +47,25 @@ model User {
 }
 
 model Creation {
-  id           String   @id @default(cuid())
-  type         String   @default("ai_clipping")
-  resultUrl    String?  @db.Text
-  aspectRatio  String?
-  resolution   String?
-  numClips     Int?
-  createdAt    DateTime @default(now())
-  userId       String
+  id             String   @id @default(cuid())
+  type           String   @default("ai_clipping")
+  resultUrl      String?  @db.Text
+  imageUrl       String?  @db.Text
+  prompt         String?  @db.Text
+  captions       String?  @db.Text // Array serializado de propuestas de copys
+  aspectRatio    String?
+  resolution     String?
+  numClips       Int?
+  createdAt      DateTime @default(now())
+  userId         String
   
-  requestId    String?  @unique
-  status       String   @default("processing")
-  error        String?  @db.Text
+  // Feedback y publicación
+  feedbackStatus String?  // "liked" | "disliked" | null
+  publishStatus  String   @default("not_published") // "not_published" | "published" | "scheduled"
+  
+  requestId      String?  @unique
+  status         String   @default("processing")
+  error          String?  @db.Text
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

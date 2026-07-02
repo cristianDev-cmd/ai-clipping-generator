@@ -30,11 +30,13 @@ export default function Navbar() {
     ? [
         { name: "Workspace", path: `/app/${currentAppId}` },
         { name: "Gallery", path: `/app/${currentAppId}/gallery` },
+        { name: "Metrics", path: `/app/${currentAppId}/metrics` },
         { name: "Pricing", path: `/app/${currentAppId}/pricing` },
       ]
     : [
         { name: "Workspace", path: "/" },
         { name: "Gallery", path: "/gallery" },
+        { name: "Metrics", path: "/metrics" },
         { name: "Pricing", path: "/pricing" },
       ];
 
