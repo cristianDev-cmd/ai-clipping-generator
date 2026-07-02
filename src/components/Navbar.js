@@ -78,7 +78,7 @@ export default function Navbar() {
           
           {/* Vercel Deploy Button */}
           <a
-            href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FSamurAIGPT%2Fcommon-saas-template"
+            href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FcristianDev-cmd%2Fai-clipping-generator"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-full border border-divider px-4 py-1.5 text-xs font-bold text-secondary-text hover:text-primary-text hover:bg-bg-card transition-colors shadow-sm"
@@ -189,7 +189,7 @@ export default function Navbar() {
 
             {/* Vercel Deploy in Mobile menu */}
             <a
-              href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FSamurAIGPT%2Fcommon-saas-template"
+              href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FcristianDev-cmd%2Fai-clipping-generator"
               target="_blank"
               rel="noopener noreferrer"
               className="flex w-full items-center justify-center gap-2 rounded-full border border-divider py-3 text-xs font-bold text-secondary-text hover:text-primary-text hover:bg-bg-card transition-all"

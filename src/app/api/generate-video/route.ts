@@ -4,38 +4,38 @@ import { GoogleGenAI } from "@google/genai";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { image, prompt, videoModel, copyModel } = body;
+    const { image, images, prompt, videoModel, copyModel, duration = 5 } = body;
 
-    // Validación básica de parámetros
-    if (!image || !prompt || !videoModel || !copyModel) {
+    // Validación de duración (mínimo 5, máximo 15 segundos)
+    const validDuration = Math.max(5, Math.min(15, Number(duration)));
+
+    // Obtener lista de imágenes en Base64
+    const imagesList: string[] = images || (image ? [image] : []);
+
+    if (imagesList.length === 0 || !prompt || !videoModel || !copyModel) {
       return NextResponse.json(
-        { error: "Faltan parámetros requeridos (image, prompt, videoModel, copyModel)." },
+        { error: "Faltan parámetros requeridos (images o image, prompt, videoModel, copyModel)." },
         { status: 400 }
       );
     }
 
+    // Extraer datos Base64 de la primera imagen para Gemini
+    const firstImgMatch = imagesList[0].match(/^data:([^;]+);base64,(.+)$/);
+    if (!firstImgMatch) {
+      return NextResponse.json(
+        { error: "Formato de imagen de referencia principal inválido. Debe ser una URI Base64 válida." },
+        { status: 400 }
+      );
+    }
+    const firstImgMime = firstImgMatch[1];
+    const firstImgData = firstImgMatch[2];
+
     // =========================================================================
     // FASE 2 - ACOPLAMIENTO DE PRISMA Y MERCADO PAGO:
     // 1. Validar la sesión del usuario (NextAuth / getServerSession).
-    //    const session = await getServerSession(authOptions);
-    //    if (!session?.user) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-    // 
     // 2. Verificar el estado de la suscripción del usuario en la base de datos (Prisma).
-    //    const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-    //    if (!user?.subscriptionActive) {
-    //      return NextResponse.json({ error: "Suscripción mensual inactiva (50,000 ARS/mes). Por favor, suscríbete para acceder." }, { status: 403 });
-    //    }
-    //
     // 3. Verificar que el usuario posea créditos suficientes para la generación.
-    //    if (user.credits < 1) {
-    //      return NextResponse.json({ error: "Créditos insuficientes para esta generación." }, { status: 403 });
-    //    }
-    //
     // 4. Descontar créditos en la base de datos.
-    //    await prisma.user.update({
-    //      where: { id: user.id },
-    //      data: { credits: { decrement: 1 } }
-    //    });
     // =========================================================================
 
     // FASE 1: Inicialización híbrida e inteligente de Google Gen AI SDK
@@ -88,24 +88,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Extraer datos Base64 de la imagen
-    const match = image.match(/^data:([^;]+);base64,(.+)$/);
-    if (!match) {
-      return NextResponse.json(
-        { error: "Formato de imagen inválido. Debe ser una URI Base64 válida." },
-        { status: 400 }
-      );
-    }
-    const mimeType = match[1];
-    const base64Data = match[2];
-
-    console.log(`[IA_INTEGRATION] Iniciando generación de video con modelo: ${videoModel}`);
-    
-    // 1. Iniciar la generación del video con Veo
+    // Configuración del video y parámetros
     const isVeo31 = videoModel.includes("veo-3.1");
+    const isVeo20 = videoModel.includes("veo-2.0");
+    
+    // Veo 2.0 con múltiples imágenes (reference_to_video) requiere obligatoriamente una duración de 8 segundos y formato 16:9 (horizontal).
+    let targetDuration = validDuration;
+    let targetAspectRatio = "9:16";
+    
+    if (isVeo20 && imagesList.length > 1) {
+      console.log("[IA_INTEGRATION] Sobrescribiendo duración a 8s y aspect ratio a 16:9 por restricciones de Veo 2.0.");
+      targetDuration = 8;
+      targetAspectRatio = "16:9";
+    }
+
     const videoConfig: any = {
-      aspectRatio: "9:16",
-      durationSeconds: 5,
+      aspectRatio: targetAspectRatio,
+      durationSeconds: targetDuration,
     };
     
     // Solo habilitar generación de audio si el modelo es Veo 3.1
@@ -113,17 +112,43 @@ export async function POST(req: NextRequest) {
       videoConfig.generateAudio = true;
     }
 
+    let veoParams: any = {
+      model: videoModel,
+      prompt: prompt,
+      config: videoConfig,
+    };
+
+    // Procesar imágenes múltiples o única
+    if (imagesList.length > 1) {
+      console.log(`[IA_INTEGRATION] Procesando múltiples imágenes de referencia (${imagesList.length}).`);
+      // Mapear hasta 4 imágenes a referenceImages
+      videoConfig.referenceImages = imagesList.slice(0, 4).map((imgBase64, idx) => {
+        const match = imgBase64.match(/^data:([^;]+);base64,(.+)$/);
+        const mimeType = match ? match[1] : "image/jpeg";
+        const base64Data = match ? match[2] : imgBase64;
+        return {
+          image: {
+            imageBytes: base64Data,
+            mimeType: mimeType,
+          },
+          // Usamos la cuarta imagen como STYLE y las primeras 3 como ASSET
+          referenceType: idx === 3 ? "STYLE" : "ASSET",
+        };
+      });
+    } else {
+      console.log("[IA_INTEGRATION] Procesando una única imagen de referencia.");
+      veoParams.image = {
+        imageBytes: firstImgData,
+        mimeType: firstImgMime,
+      };
+    }
+
+    console.log(`[IA_INTEGRATION] Iniciando generación de video con modelo: ${videoModel} y duración: ${validDuration}s`);
+    
+    // 1. Iniciar la generación del video con Veo
     let videoOp;
     try {
-      videoOp = await ai.models.generateVideos({
-        model: videoModel,
-        image: {
-          imageBytes: base64Data,
-          mimeType: mimeType,
-        },
-        prompt: prompt,
-        config: videoConfig,
-      });
+      videoOp = await ai.models.generateVideos(veoParams);
     } catch (veoErr: any) {
       console.error("[IA_INTEGRATION] Error en llamada inicial a la API de Veo:", veoErr);
       return NextResponse.json(
@@ -140,8 +165,8 @@ export async function POST(req: NextRequest) {
       contents: [
         {
           inlineData: {
-            data: base64Data,
-            mimeType: mimeType,
+            data: firstImgData,
+            mimeType: firstImgMime,
           },
         },
         "Genera exactamente 3 propuestas de descripción y hashtags virales para un post de Instagram Reels basándote en esta imagen. El tono debe ser muy persuasivo, moderno y enfocado en generar alto engagement. Retorna la respuesta estrictamente en un formato JSON que sea un array con 3 strings. Ejemplo: [\"propuesta 1...\", \"propuesta 2...\", \"propuesta 3...\"]. No agregues markdown ni bloques de código extra.",
@@ -229,18 +254,7 @@ export async function POST(req: NextRequest) {
 
     // =========================================================================
     // FASE 2 - REGISTRO EN BASE DE DATOS (PRISMA):
-    // Guardar la creación con estado completado.
-    // await prisma.creation.create({
-    //   data: {
-    //     userId: session.user.id,
-    //     type: "veo_video",
-    //     imageUrl: "URL_DE_SUPABASE_STORAGE_DESDE_ETAPA_ANTERIOR",
-    //     prompt,
-    //     resultUrl: videoUrl,
-    //     captions: JSON.stringify(captions),
-    //     status: "completed"
-    //   }
-    // });
+    // ... (notas de base de datos)
     // =========================================================================
 
     return NextResponse.json({
