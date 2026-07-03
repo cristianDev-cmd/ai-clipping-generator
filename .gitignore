@@ -41,3 +41,11 @@ next-env.d.ts
 # prisma
 /prisma/migrations
 /node_modules/.prisma
+
+# OpenNext
+.open-next
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
