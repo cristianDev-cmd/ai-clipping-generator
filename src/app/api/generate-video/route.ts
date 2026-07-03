@@ -1,7 +1,368 @@
 
 
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+class GoogleGenAI {
+  private isVertex: boolean = false;
+  private apiKey?: string;
+  private projectId?: string;
+  private location?: string;
+  private credentials?: any;
+  private cachedToken?: string;
+  private tokenExpiry?: number;
+
+  constructor(options: {
+    apiKey?: string;
+    vertexai?: boolean;
+    project?: string;
+    location?: string;
+    googleAuthOptions?: { credentials?: any };
+  }) {
+    if (options.vertexai) {
+      this.isVertex = true;
+      this.projectId = options.project;
+      this.location = options.location || "us-central1";
+      this.credentials = options.googleAuthOptions?.credentials;
+    } else {
+      this.apiKey = options.apiKey;
+    }
+  }
+
+  async getAccessToken(): Promise<string> {
+    if (!this.isVertex) return "";
+    const now = Math.floor(Date.now() / 1000);
+    if (this.cachedToken && this.tokenExpiry && now < this.tokenExpiry - 60) {
+      return this.cachedToken;
+    }
+    
+    const pem = this.credentials.private_key;
+    const pemContents = pem
+      .replace("-----BEGIN PRIVATE KEY-----", "")
+      .replace("-----END PRIVATE KEY-----", "")
+      .replace(/\s+/g, "");
+    
+    const binaryDerString = atob(pemContents);
+    const binaryDer = new Uint8Array(binaryDerString.length);
+    for (let i = 0; i < binaryDerString.length; i++) {
+      binaryDer[i] = binaryDerString.charCodeAt(i);
+    }
+    
+    const privateKey = await crypto.subtle.importKey(
+      "pkcs8",
+      binaryDer.buffer,
+      {
+        name: "RSASSA-PKCS1-v1_5",
+        hash: "SHA-256",
+      },
+      false,
+      ["sign"]
+    );
+    
+    const header = { alg: "RS256", typ: "JWT" };
+    const payload = {
+      iss: this.credentials.client_email,
+      scope: "https://www.googleapis.com/auth/cloud-platform",
+      aud: "https://oauth2.googleapis.com/token",
+      exp: now + 3600,
+      iat: now,
+    };
+    
+    const base64UrlEncode = (obj: any) => {
+      const str = JSON.stringify(obj);
+      const base64 = btoa(str);
+      return base64.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    };
+    
+    const tokenParts = [base64UrlEncode(header), base64UrlEncode(payload)];
+    const stringToSign = tokenParts.join(".");
+    
+    const encoder = new TextEncoder();
+    const signatureBuffer = await crypto.subtle.sign(
+      "RSASSA-PKCS1-v1_5",
+      privateKey,
+      encoder.encode(stringToSign)
+    );
+    
+    const signatureArray = new Uint8Array(signatureBuffer);
+    let signatureString = "";
+    for (let i = 0; i < signatureArray.length; i++) {
+      signatureString += String.fromCharCode(signatureArray[i]);
+    }
+    const signatureBase64Url = btoa(signatureString)
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+    
+    const signedJwt = `${stringToSign}.${signatureBase64Url}`;
+    
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${signedJwt}`,
+    });
+    
+    if (!tokenRes.ok) {
+      throw new Error(`Failed to get OAuth token: ${await tokenRes.text()}`);
+    }
+    
+    const tokenData = await tokenRes.json();
+    this.cachedToken = tokenData.access_token;
+    this.tokenExpiry = now + 3600;
+    return this.cachedToken!;
+  }
+
+  get models() {
+    return {
+      generateVideos: async (params: any) => {
+        const { model, prompt, config, image } = params;
+        
+        if (this.isVertex) {
+          const token = await this.getAccessToken();
+          const url = `https://${this.location}-aiplatform.googleapis.com/v1/projects/${this.projectId}/locations/${this.location}/publishers/google/models/${model}:predictLongRunning`;
+          
+          const instances = [];
+          const instance: any = { prompt };
+          
+          if (image) {
+            instance.image = {
+              bytesBase64Encoded: image.imageBytes,
+              mimeType: image.mimeType,
+            };
+          }
+          
+          if (config?.referenceImages) {
+            instance.referenceImages = config.referenceImages.map((ref: any) => ({
+              image: {
+                bytesBase64Encoded: ref.image.imageBytes,
+                mimeType: ref.image.mimeType,
+              },
+              referenceType: ref.referenceType,
+            }));
+          }
+          
+          instances.push(instance);
+          
+          const parameters: any = {
+            aspectRatio: config?.aspectRatio || "9:16",
+            durationSeconds: config?.durationSeconds || 5,
+          };
+          
+          if (config?.generateAudio !== undefined) {
+            parameters.generateAudio = config.generateAudio;
+          }
+          
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({ instances, parameters }),
+          });
+          
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Vertex AI error: ${errText}`);
+          }
+          
+          const data = await response.json();
+          return {
+            name: data.name,
+            done: data.done || false,
+            response: data.response,
+            error: data.error,
+          };
+        } else {
+          // Google AI Studio
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateVideos?key=${this.apiKey}`;
+          
+          const body: any = {
+            prompt,
+            config: {
+              aspectRatio: config?.aspectRatio || "9:16",
+              durationSeconds: config?.durationSeconds || 5,
+            }
+          };
+          
+          if (image) {
+            body.image = {
+              imageBytes: image.imageBytes,
+              mimeType: image.mimeType,
+            };
+          }
+          
+          if (config?.referenceImages) {
+            body.config.referenceImages = config.referenceImages;
+          }
+          
+          if (config?.generateAudio !== undefined) {
+            body.config.generateAudio = config.generateAudio;
+          }
+          
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Google AI Studio error: ${errText}`);
+          }
+          
+          const data = await response.json();
+          return {
+            name: data.name,
+            done: data.done || false,
+            response: data.response,
+            error: data.error,
+          };
+        }
+      },
+
+      generateContent: async (params: any) => {
+        const { model, contents, config } = params;
+        
+        if (this.isVertex) {
+          const token = await this.getAccessToken();
+          const url = `https://${this.location}-aiplatform.googleapis.com/v1/projects/${this.projectId}/locations/${this.location}/publishers/google/models/${model}:generateContent`;
+          
+          const body: any = {
+            contents: contents.map((item: any) => {
+              if (typeof item === "string") {
+                return { parts: [{ text: item }] };
+              }
+              if (item.inlineData) {
+                return { parts: [{ inlineData: item.inlineData }] };
+              }
+              return item;
+            }),
+          };
+          
+          if (config) {
+            body.generationConfig = {};
+            if (config.responseMimeType) {
+              body.generationConfig.responseMimeType = config.responseMimeType;
+            }
+            if (config.responseSchema) {
+              body.generationConfig.responseSchema = config.responseSchema;
+            }
+          }
+          
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify(body),
+          });
+          
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Vertex AI generateContent error: ${errText}`);
+          }
+          
+          const data = await response.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          return { text };
+        } else {
+          // Google AI Studio
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+          
+          const body: any = {
+            contents: contents.map((item: any) => {
+              if (typeof item === "string") {
+                return { parts: [{ text: item }] };
+              }
+              if (item.inlineData) {
+                return { parts: [{ inlineData: item.inlineData }] };
+              }
+              return item;
+            }),
+          };
+          
+          if (config) {
+            body.generationConfig = {};
+            if (config.responseMimeType) {
+              body.generationConfig.responseMimeType = config.responseMimeType;
+            }
+            if (config.responseSchema) {
+              body.generationConfig.responseSchema = config.responseSchema;
+            }
+          }
+          
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Google AI Studio generateContent error: ${errText}`);
+          }
+          
+          const data = await response.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          return { text };
+        }
+      }
+    };
+  }
+
+  get operations() {
+    return {
+      getVideosOperation: async (params: { operation: any }) => {
+        const opName = params.operation.name;
+        
+        if (this.isVertex) {
+          const token = await this.getAccessToken();
+          const url = `https://${this.location}-aiplatform.googleapis.com/v1/${opName}`;
+          
+          const response = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+            },
+          });
+          
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Vertex AI operations error: ${errText}`);
+          }
+          
+          const data = await response.json();
+          return {
+            name: data.name,
+            done: data.done || false,
+            response: data.response,
+            error: data.error,
+          };
+        } else {
+          // Google AI Studio
+          const url = `https://generativelanguage.googleapis.com/v1beta/${opName}?key=${this.apiKey}`;
+          
+          const response = await fetch(url, {
+            method: "GET",
+          });
+          
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Google AI Studio operations error: ${errText}`);
+          }
+          
+          const data = await response.json();
+          return {
+            name: data.name,
+            done: data.done || false,
+            response: data.response,
+            error: data.error,
+          };
+        }
+      }
+    };
+  }
+}
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
